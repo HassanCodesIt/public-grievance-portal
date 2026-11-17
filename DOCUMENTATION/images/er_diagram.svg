@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 850" width="1100" height="850" style="background:#0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="tableShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Banner -->
+  <rect x="0" y="0" width="1100" height="60" fill="#1e293b" />
+  <text x="30" y="38" fill="#38bdf8" font-size="20" font-weight="700">Database Entity-Relationship Diagram (10 Core Entities)</text>
+  <text x="1070" y="36" fill="#94a3b8" font-size="12" text-anchor="end">PostgreSQL / SQLAlchemy 2.0</text>
+
+  <!-- Entity 1: users -->
+  <g transform="translate(40, 90)">
+    <rect x="0" y="0" width="220" height="230" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h220 v35 h-220 z" fill="#0284c7" rx="8" />
+    <text x="110" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">users</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#cbd5e1" font-size="11">    name : String(100)</text>
+    <text x="15" y="95" fill="#facc15" font-size="11">UK  email : String(120)</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    mobile : String(20)</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    password_hash : String</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    role : String(30)</text>
+    <text x="15" y="175" fill="#a78bfa" font-size="11">FK  department_id : Int</text>
+    <text x="15" y="195" fill="#cbd5e1" font-size="11">    is_active : Boolean</text>
+    <text x="15" y="215" fill="#cbd5e1" font-size="11">    created_at : DateTime</text>
+  </g>
+
+  <!-- Entity 2: departments -->
+  <g transform="translate(40, 360)">
+    <rect x="0" y="0" width="220" height="150" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h220 v35 h-220 z" fill="#0d9488" rx="8" />
+    <text x="110" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">departments</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#facc15" font-size="11">UK  name : String(120)</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    description : Text</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    is_featured : Boolean</text>
+  </g>
+
+  <!-- Entity 3: grievances (Central Hub) -->
+  <g transform="translate(340, 90)">
+    <rect x="0" y="0" width="250" height="340" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" filter="url(#tableShadow)" />
+    <path d="M0 0 h250 v35 h-250 z" fill="#0284c7" rx="8" />
+    <text x="125" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">grievances</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#facc15" font-size="11">UK  reference_no : String(40)</text>
+    <text x="15" y="95" fill="#a78bfa" font-size="11">FK  citizen_id : Integer</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    district : String(60)</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    category : String(80)</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    subject : String(255)</text>
+    <text x="15" y="175" fill="#cbd5e1" font-size="11">    description : Text</text>
+    <text x="15" y="195" fill="#cbd5e1" font-size="11">    priority : String(20)</text>
+    <text x="15" y="215" fill="#4ade80" font-size="11">    status : String(30)</text>
+    <text x="15" y="235" fill="#f87171" font-size="11">    due_at : DateTime (SLA)</text>
+    <text x="15" y="255" fill="#f87171" font-size="11">    escalated : Boolean</text>
+    <text x="15" y="275" fill="#a78bfa" font-size="11">FK  department_id : Integer</text>
+    <text x="15" y="295" fill="#cbd5e1" font-size="11">    ai_summary : Text</text>
+    <text x="15" y="315" fill="#cbd5e1" font-size="11">    created_at / updated_at</text>
+  </g>
+
+  <!-- Entity 4: grievance_history -->
+  <g transform="translate(660, 90)">
+    <rect x="0" y="0" width="220" height="220" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h220 v35 h-220 z" fill="#6366f1" rx="8" />
+    <text x="110" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">grievance_history</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#a78bfa" font-size="11">FK  grievance_id : Integer</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    from_status : String</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    to_status : String</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    remark : Text</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    visibility : Public/Internal</text>
+    <text x="15" y="175" fill="#a78bfa" font-size="11">FK  actor_id : Integer</text>
+    <text x="15" y="195" fill="#cbd5e1" font-size="11">    actor_role : String</text>
+    <text x="15" y="215" fill="#cbd5e1" font-size="11">    created_at : DateTime</text>
+  </g>
+
+  <!-- Entity 5: department_assignments -->
+  <g transform="translate(660, 340)">
+    <rect x="0" y="0" width="220" height="190" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h220 v35 h-220 z" fill="#8b5cf6" rx="8" />
+    <text x="110" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">department_assignments</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#a78bfa" font-size="11">FK  grievance_id : Integer</text>
+    <text x="15" y="95" fill="#a78bfa" font-size="11">FK  department_id : Integer</text>
+    <text x="15" y="115" fill="#a78bfa" font-size="11">FK  officer_id : Integer</text>
+    <text x="15" y="135" fill="#a78bfa" font-size="11">FK  assigned_by : Integer</text>
+    <text x="15" y="155" fill="#4ade80" font-size="11">    state : String(40)</text>
+    <text x="15" y="175" fill="#cbd5e1" font-size="11">    assigned_at : DateTime</text>
+  </g>
+
+  <!-- Entity 6: action_reports -->
+  <g transform="translate(660, 560)">
+    <rect x="0" y="0" width="220" height="190" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h220 v35 h-220 z" fill="#ec4899" rx="8" />
+    <text x="110" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">action_reports</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#a78bfa" font-size="11">FK  assignment_id : Integer</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    text : Text (ATR)</text>
+    <text x="15" y="115" fill="#a78bfa" font-size="11">FK  submitted_by : Integer</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    cmo_decision : accept/return</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    cmo_remark : Text</text>
+    <text x="15" y="175" fill="#cbd5e1" font-size="11">    decided_at : DateTime</text>
+  </g>
+
+  <!-- Entity 7: attachments -->
+  <g transform="translate(340, 470)">
+    <rect x="0" y="0" width="250" height="200" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h250 v35 h-250 z" fill="#f59e0b" rx="8" />
+    <text x="125" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">attachments</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#a78bfa" font-size="11">FK  grievance_id : Integer</text>
+    <text x="15" y="95" fill="#a78bfa" font-size="11">FK  assignment_id : Integer (null)</text>
+    <text x="15" y="115" fill="#a78bfa" font-size="11">FK  uploaded_by : Integer</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    kind : grievance / report</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    filename : String, size : Int</text>
+    <text x="15" y="175" fill="#38bdf8" font-size="11">    data : LargeBinary (bytea)</text>
+    <text x="15" y="195" fill="#cbd5e1" font-size="11">    created_at : DateTime</text>
+  </g>
+
+  <!-- Entity 8: citizen_feedback -->
+  <g transform="translate(340, 700)">
+    <rect x="0" y="0" width="250" height="120" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h250 v35 h-250 z" fill="#10b981" rx="8" />
+    <text x="125" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">citizen_feedback</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#facc15" font-size="11">UK,FK grievance_id : Integer</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    rating : Integer (1-5)</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    comment : Text</text>
+  </g>
+
+  <!-- Entity 9: ai_analyses -->
+  <g transform="translate(40, 540)">
+    <rect x="0" y="0" width="250" height="260" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h250 v35 h-250 z" fill="#a855f7" rx="8" />
+    <text x="125" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">ai_analyses</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#a78bfa" font-size="11">FK  grievance_id : Integer</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    input_hash : String(64)</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    category, department, priority</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    summary : Text</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    confidence : Float (0-1)</text>
+    <text x="15" y="175" fill="#38bdf8" font-size="11">    source : groq / fallback</text>
+    <text x="15" y="195" fill="#cbd5e1" font-size="11">    model : openai/gpt-oss-120b</text>
+    <text x="15" y="215" fill="#4ade80" font-size="11">    final_category, final_priority</text>
+    <text x="15" y="235" fill="#a78bfa" font-size="11">FK  reviewed_by : Integer</text>
+  </g>
+
+  <!-- Entity 10: contact_enquiries -->
+  <g transform="translate(900, 90)">
+    <rect x="0" y="0" width="170" height="170" rx="8" fill="#1e293b" stroke="#334155" filter="url(#tableShadow)" />
+    <path d="M0 0 h170 v35 h-170 z" fill="#64748b" rx="8" />
+    <text x="85" y="23" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">contact_enquiries</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11">PK  id : Integer</text>
+    <text x="15" y="75" fill="#cbd5e1" font-size="11">    name : String</text>
+    <text x="15" y="95" fill="#cbd5e1" font-size="11">    email : String</text>
+    <text x="15" y="115" fill="#cbd5e1" font-size="11">    subject : String</text>
+    <text x="15" y="135" fill="#cbd5e1" font-size="11">    message : Text</text>
+    <text x="15" y="155" fill="#cbd5e1" font-size="11">    created_at : Date</text>
+  </g>
+
+  <!-- Connecting Lines -->
+  <!-- users -> grievances -->
+  <line x1="260" y1="150" x2="340" y2="150" stroke="#38bdf8" stroke-width="2" />
+  <!-- grievances -> grievance_history -->
+  <line x1="590" y1="150" x2="660" y2="150" stroke="#38bdf8" stroke-width="2" />
+  <!-- grievances -> department_assignments -->
+  <line x1="590" y1="280" x2="660" y2="390" stroke="#38bdf8" stroke-width="2" />
+  <!-- department_assignments -> action_reports -->
+  <line x1="770" y1="530" x2="770" y2="560" stroke="#8b5cf6" stroke-width="2" />
+  <!-- grievances -> attachments -->
+  <line x1="465" y1="430" x2="465" y2="470" stroke="#f59e0b" stroke-width="2" />
+  <!-- grievances -> citizen_feedback -->
+  <line x1="465" y1="670" x2="465" y2="700" stroke="#10b981" stroke-width="2" />
+  <!-- grievances -> ai_analyses -->
+  <line x1="340" y1="360" x2="290" y2="560" stroke="#a855f7" stroke-width="2" />
+</svg>
