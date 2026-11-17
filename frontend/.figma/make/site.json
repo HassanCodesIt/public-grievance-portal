@@ -1,0 +1,11 @@
+{
+  "title": "ജനസേവനം · Janasevanam | Public Grievance Redressal Portal",
+  "description": "A civic grievance portal where residents submit and track complaints while government staff review, assign, and resolve cases with transparent updates.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
