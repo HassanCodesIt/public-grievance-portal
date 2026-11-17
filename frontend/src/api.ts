@@ -88,12 +88,21 @@ export const departments = [
   { name: "Social Justice", description: "Inclusive welfare and social support." },
 ];
 
-const API_BASE = (
+export const API_BASE = (
   import.meta.env.VITE_API_URL ||
   (typeof window !== "undefined" && window.location.hostname !== "localhost"
     ? "/api"
     : "http://localhost:8000/api")
 ).replace(/\/$/, "");
+
+export async function checkServerHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");

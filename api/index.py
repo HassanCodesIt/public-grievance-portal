@@ -14,3 +14,4 @@ from backend.app.main import app
 
 # Export ASGI app instance for Vercel's Python runtime
 asgi_app = app
+

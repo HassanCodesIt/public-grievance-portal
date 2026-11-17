@@ -75,12 +75,36 @@ export function AppShell() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
   const role = localStorage.getItem("role") as Role | null;
   const name = localStorage.getItem("name") || "Demo user";
   const portal =
     location.pathname.startsWith("/citizen") ||
     location.pathname.startsWith("/cmo") ||
     location.pathname.startsWith("/officer");
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    let active = true;
+
+    const probe = async () => {
+      timer = setTimeout(() => {
+        if (active) setWakingUp(true);
+      }, 1500);
+
+      const ok = await api.checkServerHealth();
+      if (active) {
+        clearTimeout(timer);
+        setWakingUp(!ok);
+      }
+    };
+
+    probe();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const section = location.pathname.startsWith("/citizen/submit")
@@ -122,6 +146,12 @@ export function AppShell() {
   return (
     <div className="app">
       <div className="prototype-banner">{disclaimer}</div>
+      {wakingUp && (
+        <div className="waking-banner" role="status">
+          <Clock3 size={15} />
+          <span>Server is waking up (free tier instances sleep when idle). Requests will be processed automatically...</span>
+        </div>
+      )}
       <header className="topbar">
         <div className="topbar-inner">
           <Logo />
