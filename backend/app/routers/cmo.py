@@ -340,3 +340,4 @@ def cmo_stats(
 ):
     """Detailed analytics and counts for CMO Admin dashboard."""
     return get_cmo_dashboard_stats(db)
+

@@ -115,3 +115,4 @@ The system prompt explicitly commands the model to comprehend complaints submitt
 Example Malayalam query handled:
 > *"റോഡിലെ വലിയ കുഴികൾ കാരണം വാഹനങ്ങൾ അപകടത്തിൽ പെടുന്നു. എത്രയും പെട്ടെന്ന് ടാറിങ് നടത്തണം."*  
 > -> Categorized as `Roads and Infrastructure`, `Public Works`, Summary: *"Citizen reports severe road potholes causing vehicular accidents and requests immediate road resurfacing."*
+

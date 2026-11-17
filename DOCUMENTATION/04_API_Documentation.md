@@ -261,3 +261,4 @@ Submit final Action-Taken Report with optional evidence document. Sets assignmen
 Health readiness probe.
 - **Access:** Public
 - **Response (`200 OK`):** `{ "status": "ok", "service": "...", "timestamp": "...", "env": "..." }`
+

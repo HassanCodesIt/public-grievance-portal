@@ -43,3 +43,4 @@ The **Janasevanam (ജനസേവനം)** Public Grievance Redressal Portal so
 - **Fictional Data Only:** Test data uses the reserved `.example.test` domain and mock phone numbers.
 - **Dual-Mode AI Resilience:** If the Groq API key is omitted, exhausted, or experiences network interruptions, the system automatically engages an in-memory heuristic keyword fallback engine clearly labeled in the user interface.
 - **Attachment Storage:** Attachments (PNG, JPEG, PDF up to 2 MB) are verified via magic bytes and persisted securely in the database (`bytea` / `LargeBinary`) to avoid data loss on ephemeral hosting tiers.
+

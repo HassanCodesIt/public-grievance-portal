@@ -88,3 +88,4 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user)):
     """Retrieve profile of the authenticated user."""
     return current_user
+

@@ -286,3 +286,4 @@ Auditing of all AI triage recommendations, confidence levels, and human override
 | `final_priority` | String(20) | NULL | Final priority set by human reviewer |
 | `reviewed_by` | Integer | FK(`users.id`), NULL | CMO reviewer user ID |
 | `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Analysis timestamp |
+

@@ -99,3 +99,4 @@ def track_grievance(reference_no: str, db: Session = Depends(get_db)):
         "updatedAt": grievance.updated_at.isoformat(),
         "history": public_history,
     }
+

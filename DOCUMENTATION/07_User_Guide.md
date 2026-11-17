@@ -102,3 +102,4 @@ All accounts use fictional credentials ending in `.example.test` with password `
 3. (Optional) Attach a completion photo or signed inspection PDF.
 4. Click **Submit Action Report**.
 5. The assignment state updates to **Report Submitted** and moves to the CMO's desk for final sign-off.
+

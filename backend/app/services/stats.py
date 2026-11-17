@@ -80,3 +80,4 @@ def get_cmo_dashboard_stats(db: Session) -> Dict[str, Any]:
         "by_district": by_district,
         "by_department": by_department,
     }
+

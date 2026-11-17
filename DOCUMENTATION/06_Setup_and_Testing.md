@@ -113,3 +113,4 @@ python -m pytest -v
 | 16 | `test_16_ai_analyze_returns_valid_json_groq_mocked` | Mocks Groq API response and asserts structured triage JSON output (`source: groq`). |
 | 17 | `test_17_ai_fallback_is_used_and_labelled_when_groq_fails` | Simulates Groq timeout/outage and asserts fallback keyword classifier takes over with `source: fallback`. |
 | 18 | `test_18_ai_output_outside_allowed_lists_is_normalized` | Simulates LLM hallucinated categories/priorities and asserts backend normalizes to allowed enums. |
+

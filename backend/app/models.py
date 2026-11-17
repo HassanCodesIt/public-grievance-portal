@@ -185,3 +185,4 @@ class AiAnalysis(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     grievance = relationship("Grievance", back_populates="ai_analyses")
+

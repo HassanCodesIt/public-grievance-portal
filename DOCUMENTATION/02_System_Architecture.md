@@ -137,3 +137,4 @@ sequenceDiagram
     FE->>API: POST /api/grievances/:id/feedback {rating: 5}
     API->>DB: Insert CitizenFeedback record
 ```
+

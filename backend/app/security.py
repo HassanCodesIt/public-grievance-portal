@@ -106,3 +106,4 @@ def require_role(allowed_roles: Union[str, List[str]]):
         return current_user
 
     return role_checker
+

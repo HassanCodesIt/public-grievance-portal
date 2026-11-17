@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,8 +20,15 @@ from .routers import (
 )
 from .seed import seed_database
 
-# Create tables on startup
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure database schema and initial seed data exist on launch."""
+    Base.metadata.create_all(bind=engine)
+    try:
+        seed_database()
+    except Exception as e:
+        print(f"Startup database verification: {e}")
+    yield
 
 app = FastAPI(
     title="CM Kerala Public Grievance Redressal Portal API",
@@ -28,10 +36,10 @@ app = FastAPI(
     description="Recruitment Prototype: Public Grievance Redressal Portal. Not affiliated with the Government of Kerala. All data fictional.",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # In-memory Rate Limiter
-# Tracks requests per IP: { (ip, endpoint): [timestamps] }
 _RATE_LIMIT_BUCKET = defaultdict(list)
 RATE_LIMIT_RULES = {
     "/api/auth/login": (15, 60),      # 15 requests per 60 seconds
@@ -56,7 +64,7 @@ async def rate_limit_middleware(request: Request, call_next):
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
-                    "detail": f"Rate limit exceeded. Try again in a few seconds.",
+                    "detail": "Rate limit exceeded. Try again in a few seconds.",
                     "code": "RATE_LIMIT_EXCEEDED",
                 },
             )
@@ -132,7 +140,7 @@ app.add_middleware(
 # Health Check (for uptime pings, cold starts, and waking up banner)
 @app.get("/api/health")
 def health_check():
-    """Uptime and readiness ping for Render and cold-start monitor."""
+    """Uptime and readiness ping for Render/Vercel and cold-start monitor."""
     return {
         "status": "ok",
         "service": "CM Kerala Public Grievance Portal API",
@@ -149,12 +157,3 @@ app.include_router(grievances.router, prefix="/api")
 app.include_router(status_router.router, prefix="/api")
 app.include_router(cmo.router, prefix="/api")
 app.include_router(officer.router, prefix="/api")
-
-
-@app.on_event("startup")
-def on_startup():
-    """Ensure seeded demo data exists on launch."""
-    try:
-        seed_database()
-    except Exception as e:
-        print(f"Startup database check: {e}")

@@ -53,3 +53,4 @@ def find_duplicate_candidates(
 
     candidates.sort(key=lambda x: x["similarity"], reverse=True)
     return candidates[:limit]
+

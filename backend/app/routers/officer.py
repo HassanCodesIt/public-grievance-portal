@@ -182,3 +182,4 @@ def submit_action_report(
     db.refresh(grievance)
 
     return serialize_grievance_for_response(grievance, include_internal_history=True)
+

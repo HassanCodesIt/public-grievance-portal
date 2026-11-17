@@ -398,3 +398,4 @@ def download_attachment(
             "Content-Disposition": f'inline; filename="{attachment.filename}"'
         },
     )
+

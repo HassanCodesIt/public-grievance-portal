@@ -224,3 +224,4 @@ Detailed architectural specifications and guides are located in the `DOCUMENTATI
 - [07_User_Guide.md](DOCUMENTATION/07_User_Guide.md)
 - [System Architecture Diagram](DOCUMENTATION/images/architecture_diagram.png)
 - [Database ER Diagram](DOCUMENTATION/images/er_diagram.png)
+

@@ -42,3 +42,4 @@ def change_status(
     )
 
     return serialize_grievance_for_response(updated, include_internal_history=True)
+

@@ -67,3 +67,4 @@ def validate_and_read_upload(file: UploadFile) -> tuple[str, str, int, bytes]:
         )
 
     return file.filename, content_type, size, data
+

@@ -581,3 +581,4 @@ def test_18_ai_output_outside_allowed_lists_is_normalized(client, db_session, au
             # Must be normalized to allowed values
             assert data["category"] in ["Roads and Infrastructure", "Healthcare", "Education", "Water Supply", "Electricity", "Waste and Sanitation", "Public Distribution", "Land and Revenue", "Transport", "Other"]
             assert data["priority"] in ["Low", "Medium", "High"]
+
