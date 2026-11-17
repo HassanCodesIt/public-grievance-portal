@@ -16,7 +16,6 @@
     "react-router": "^7.18.5"
   },
   "devDependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.2.19",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
