@@ -12,9 +12,13 @@
 
 ## 🌐 Live Demo
 
+> 🚀 **[Open the Live Public Grievance Portal](https://public-grievance-portal-inky.vercel.app/)**
+>
+> Try the deployed application instantly in your browser.
+
 | Component | URL |
 |---|---|
-| **Frontend Application** | `HOSTED_FRONTEND_URL` |
+| **Frontend Application** | [public-grievance-portal-inky.vercel.app](https://public-grievance-portal-inky.vercel.app/) |
 | **Backend API & Swagger Docs** | `HOSTED_API_URL` |
 
 > [!NOTE]
