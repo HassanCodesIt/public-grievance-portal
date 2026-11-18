@@ -583,15 +583,34 @@ export async function decideReport(id: string, decision: "accept" | "return", re
   }
 }
 
-export async function getCmoStats() {
+export interface CmoStats {
+  total: number;
+  pending: number;
+  resolved: number;
+  overdue: number;
+  by_status: Record<string, number>;
+  by_priority: Record<string, number>;
+  by_district: { name: string; count: number }[];
+  by_department: { name: string; count: number }[];
+}
+
+export async function getCmoStats(): Promise<CmoStats> {
   try {
-    return await apiFetch<{ total: number; pending: number; resolved: number; overdue: number }>("/cmo/stats");
+    return await apiFetch<CmoStats>("/cmo/stats");
   } catch {
+    const by_status: Record<string, number> = {};
+    for (const s of ["Submitted", "Under Review", "In Progress", "Resolved", "Reopened"]) {
+      by_status[s] = mockGrievances.filter((g) => g.status === s).length;
+    }
     return {
       total: mockGrievances.length,
       pending: mockGrievances.filter((g) => g.status !== "Resolved").length,
       resolved: mockGrievances.filter((g) => g.status === "Resolved").length,
       overdue: mockGrievances.filter(isOverdue).length,
+      by_status,
+      by_priority: { High: 4, Medium: 5, Low: 3 },
+      by_district: departments.slice(0, 6).map((d, i) => ({ name: d.name.substring(0, 6), count: 2 + i })),
+      by_department: departments.map((d, i) => ({ name: d.name, count: 1 + i })),
     };
   }
 }

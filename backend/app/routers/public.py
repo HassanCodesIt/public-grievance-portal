@@ -61,7 +61,7 @@ def track_grievance(reference_no: str, db: Session = Depends(get_db)):
     """
     clean_ref = reference_no.strip().upper()
     grievance = db.query(Grievance).filter(
-        func_upper := Grievance.reference_no.ilike(clean_ref)
+        Grievance.reference_no.ilike(clean_ref)
     ).first()
 
     if not grievance:

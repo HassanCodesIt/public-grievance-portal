@@ -286,12 +286,13 @@ export function SubmitGrievancePage() {
 
 export function CitizenDashboard() {
   const { data, loading, error, retry } = useLoad(api.getMyGrievances, []);
+  const { data: user } = useLoad(() => api.me("citizen"), []);
   const pending = data?.filter((g) => g.status !== "Resolved").length ?? 0;
   return (
     <div className="container portal-page">
       <PageHeader
         eyebrow="Citizen dashboard"
-        title="Good morning, Meera"
+        title={user?.name ? `Welcome back, ${user.name}` : "My Grievances"}
         description="Track progress, review updates and respond when action is complete."
         action={
           <Link to="/citizen/submit" className="btn primary">

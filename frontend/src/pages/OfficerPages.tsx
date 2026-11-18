@@ -29,12 +29,13 @@ import { useLoad } from "../hooks";
 
 export function OfficerOverview() {
   const { data, loading, error, retry } = useLoad(api.getOfficerGrievances, []);
+  const { data: user } = useLoad(() => api.me("officer"), []);
   return (
     <div className="container portal-page">
       <PageHeader
-        eyebrow="Water Resources Department"
+        eyebrow={user?.name ? `${user.name} · Officer Portal` : "Department officer portal"}
         title="Assigned grievances"
-        description="Welcome, Ravi. Review CMO instructions and keep action progress up to date."
+        description="Review CMO instructions and keep action progress up to date."
       />
       <div className="count-grid four">
         <CountCard label="Assigned" value={data?.length ?? "—"} icon={ClipboardList} />

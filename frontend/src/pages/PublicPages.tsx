@@ -29,6 +29,7 @@ import {
   Button,
   Card,
   CountCard,
+  ErrorBanner,
   Field,
   HistoryTimeline,
   PageHeader,
@@ -184,6 +185,8 @@ export function HomePage() {
 
 function DepartmentFeature() {
   const icons = [Wrench, HeartPulse, GraduationCap, Droplets, Lightbulb, Building2];
+  const { data: depts, loading } = useLoad(api.getDepartments, []);
+  const items = depts ?? api.departments;
   return (
     <section className="section">
       <div className="container">
@@ -197,18 +200,24 @@ function DepartmentFeature() {
           </Link>
         </div>
         <div className="department-grid">
-          {api.departments.slice(0, 6).map((item, i) => {
-            const Icon = icons[i];
-            return (
-              <Card className="department-card" key={item.name}>
-                <span className="department-icon">
-                  <Icon />
-                </span>
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
-              </Card>
-            );
-          })}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Card className="department-card" key={i}>
+                  <Skeleton rows={2} />
+                </Card>
+              ))
+            : items.slice(0, 6).map((item, i) => {
+                const Icon = icons[i];
+                return (
+                  <Card className="department-card" key={item.name}>
+                    <span className="department-icon">
+                      <Icon />
+                    </span>
+                    <h3>{item.name}</h3>
+                    <p>{item.description}</p>
+                  </Card>
+                );
+              })}
         </div>
       </div>
     </section>
@@ -354,26 +363,35 @@ export function DepartmentsPage() {
     Send,
     Users,
   ];
+  const { data: depts, loading, error, retry } = useLoad(api.getDepartments, []);
+  const items = depts ?? api.departments;
   return (
     <div className="container page">
       <PageHeader
         eyebrow="Service directory"
         title="Departments"
-        description="Ten fictional department cards demonstrate how grievances can be routed by category."
+        description="Government departments that handle citizen grievances in this portal."
       />
+      {error && <ErrorBanner onRetry={retry} />}
       <div className="department-grid large">
-        {api.departments.map((item, i) => {
-          const Icon = icons[i];
-          return (
-            <Card className="department-card" key={item.name}>
-              <span className="department-icon">
-                <Icon />
-              </span>
-              <h2>{item.name}</h2>
-              <p>{item.description}</p>
-            </Card>
-          );
-        })}
+        {loading
+          ? Array.from({ length: 10 }).map((_, i) => (
+              <Card className="department-card" key={i}>
+                <Skeleton rows={2} />
+              </Card>
+            ))
+          : items.map((item, i) => {
+              const Icon = icons[i % icons.length];
+              return (
+                <Card className="department-card" key={item.name}>
+                  <span className="department-icon">
+                    <Icon />
+                  </span>
+                  <h2>{item.name}</h2>
+                  <p>{item.description}</p>
+                </Card>
+              );
+            })}
       </div>
     </div>
   );

@@ -229,8 +229,21 @@ Review Action-Taken Report: accept (transitions status to `Resolved`, assignment
 - **Request Body:** `{ "decision": "accept", "remark": "Work confirmed complete." }`
 
 ### 5.8 `GET /api/cmo/stats`
-Analytics payload: total counts, pending, resolved, SLA overdue, and breakdowns by district, department, and priority.
+Analytics payload: total counts, pending, resolved, SLA overdue, and breakdowns by status, district, department, and priority.
 - **Access:** CMO Admin
+- **Response (`200 OK`):**
+```json
+{
+  "total": 25,
+  "pending": 20,
+  "resolved": 5,
+  "overdue": 4,
+  "by_status": { "Submitted": 6, "Under Review": 5, "In Progress": 8, "Resolved": 5, "Reopened": 1 },
+  "by_priority": { "High": 8, "Medium": 11, "Low": 6 },
+  "by_district": [{ "name": "Thiruvananthapuram", "count": 4 }, ...],
+  "by_department": [{ "name": "Public Works", "count": 6 }, ...]
+}
+```
 
 ---
 

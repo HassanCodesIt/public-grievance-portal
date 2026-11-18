@@ -62,40 +62,38 @@ function MiniBars({
     </div>
   );
 }
-function Donut() {
+function Donut({ byStatus }: { byStatus: Record<string, number> }) {
+  const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
+  const statusClasses: Record<string, string> = {
+    Submitted: "submitted",
+    "Under Review": "review",
+    "In Progress": "progress",
+    Resolved: "resolved",
+    Reopened: "review",
+  };
   return (
     <div className="donut-wrap">
       <div className="donut">
         <span>
-          <strong>12</strong>Total
+          <strong>{total}</strong>Total
         </span>
       </div>
       <ul>
-        <li>
-          <i className="submitted" />
-          Submitted <strong>2</strong>
-        </li>
-        <li>
-          <i className="progress" />
-          In Progress <strong>3</strong>
-        </li>
-        <li>
-          <i className="resolved" />
-          Resolved <strong>4</strong>
-        </li>
-        <li>
-          <i className="review" />
-          Other <strong>3</strong>
-        </li>
+        {Object.entries(byStatus).map(([s, n]) => (
+          <li key={s}>
+            <i className={statusClasses[s] ?? "review"} />
+            {s} <strong>{n}</strong>
+          </li>
+        ))}
       </ul>
     </div>
   );
 }
 function Trend() {
   return (
-    <div className="trend-chart" aria-label="Illustrative grievance trend">
+    <div className="trend-chart" aria-label="Illustrative six-month trend (shape only)">
       <svg viewBox="0 0 500 150" role="img">
-        <title>Trend over six months</title>
+        <title>Illustrative trend shape — not based on stored data</title>
         <path
           className="area"
           d="M0,125 C70,100 80,110 140,75 S230,95 290,50 S390,70 500,20 L500,150 L0,150Z"
@@ -129,6 +127,14 @@ export function CmoOverview() {
     () => api.getCmoGrievances(filters, page),
     [page, filters.status, filters.search],
   );
+
+  // Derive chart data from live stats
+  const districtValues = stats?.by_district?.map((d) => d.count) ?? [];
+  const districtLabels = stats?.by_district?.map((d) => d.name.substring(0, 6)) ?? [];
+  const deptValues = stats?.by_department?.map((d) => d.count) ?? [];
+  const deptLabels = stats?.by_department?.map((d) => d.name.split(" ")[0]) ?? [];
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / 8)) : 1;
+
   return (
     <div className="container portal-page">
       <PageHeader
@@ -162,10 +168,11 @@ export function CmoOverview() {
             </div>
             <BarChart3 />
           </div>
-          <MiniBars
-            values={[22, 18, 28, 13, 20, 25]}
-            labels={["TVM", "EKM", "TSR", "KTM", "KZD", "KNR"]}
-          />
+          {districtValues.length > 0 ? (
+            <MiniBars values={districtValues} labels={districtLabels} />
+          ) : (
+            <Skeleton rows={3} />
+          )}
         </Card>
         <Card className="chart-card">
           <div className="chart-head">
@@ -175,11 +182,11 @@ export function CmoOverview() {
             </div>
             <Users />
           </div>
-          <MiniBars
-            values={[30, 18, 25, 15, 22]}
-            labels={["PWD", "Health", "Water", "LSG", "Revenue"]}
-            color="blue"
-          />
+          {deptValues.length > 0 ? (
+            <MiniBars values={deptValues} labels={deptLabels} color="blue" />
+          ) : (
+            <Skeleton rows={3} />
+          )}
         </Card>
         <Card className="chart-card">
           <div className="chart-head">
@@ -189,7 +196,11 @@ export function CmoOverview() {
             </div>
             <PieChart />
           </div>
-          <Donut />
+          {stats?.by_status ? (
+            <Donut byStatus={stats.by_status} />
+          ) : (
+            <Skeleton rows={4} />
+          )}
         </Card>
         <Card className="chart-card">
           <div className="chart-head">
@@ -206,7 +217,7 @@ export function CmoOverview() {
         <div className="card-heading">
           <div>
             <h2>All grievances</h2>
-            <p>Showing fictional records across departments.</p>
+            <p>Showing grievances across all districts and departments.</p>
           </div>
           <Button variant="secondary">
             <FileDown size={17} /> Export sample
@@ -330,7 +341,7 @@ export function CmoOverview() {
             </table>
           </div>
         )}
-        <Pagination page={page} totalPages={2} onChange={setPage} />
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </Card>
     </div>
   );
@@ -339,6 +350,7 @@ export function CmoOverview() {
 export function CmoDetail() {
   const { id = "1" } = useParams();
   const { data: g, loading, error, retry, setData } = useLoad(() => api.getCmoGrievance(id), [id]);
+  const { data: deptList } = useLoad(api.getDepartments, []);
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState("");
@@ -452,11 +464,8 @@ export function CmoDetail() {
             </div>
             <div className="confidence">
               <span>
-                Confidence <strong>84%</strong>
+                AI suggestion — editable by CMO
               </span>
-              <div>
-                <i style={{ width: "84%" }} />
-              </div>
             </div>
             <div className="decision-row">
               <Button
@@ -515,7 +524,7 @@ export function CmoDetail() {
                 label="Department"
                 value={department}
                 onChange={setDepartment}
-                options={api.departments.map((x) => x.name)}
+                options={deptList ? deptList.map((x) => x.name) : api.departments.map((x) => x.name)}
               />
               <SelectField
                 label="Officer"

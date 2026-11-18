@@ -11,11 +11,22 @@ def get_public_portal_stats(db: Session) -> Dict[str, Any]:
     resolved = db.query(func.count(Grievance.id)).filter(Grievance.status == "Resolved").scalar() or 0
     in_progress = db.query(func.count(Grievance.id)).filter(Grievance.status.in_(["In Progress", "Under Review"])).scalar() or 0
     
-    # Average turnaround in days (calculated or default sensible 5.4 days)
+    # Average turnaround in days (calculated dynamically from resolved grievances)
     avg_days = 5.4
     if resolved > 0:
-        # Approximate from sample
-        avg_days = 6.2
+        resolved_grievances = (
+            db.query(Grievance.created_at, Grievance.updated_at)
+            .filter(Grievance.status == "Resolved")
+            .all()
+        )
+        if resolved_grievances:
+            diffs = [
+                (g.updated_at - g.created_at).total_seconds() / 86400.0
+                for g in resolved_grievances
+                if g.updated_at and g.created_at and g.updated_at >= g.created_at
+            ]
+            if diffs:
+                avg_days = round(sum(diffs) / len(diffs), 1)
 
     return {
         "total": total,

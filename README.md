@@ -1,227 +1,131 @@
-# CM Kerala Public Grievance Redressal Portal (Janasevanam · ജനസേവനം)
+# Janasevanam (ജനസേവനം) — CM Kerala Public Grievance Redressal Portal
 
-> **⚠️ RECRUITMENT PROTOTYPE DISCLAIMER**  
-> **This application is an engineering prototype developed exclusively for the WhiteMatrix Software Solutions Machine Test (AI Full Stack Engineer).**  
-> **It is NOT affiliated with, authorized by, or endorsed by the Government of Kerala or the Chief Minister's Office (CMO). All citizen grievances, officer profiles, department contacts, and administrative actions are completely fictional.**
+> **Recruitment prototype. Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional.**
 
 ---
 
-## 📌 Executive Summary
-**Janasevanam** is a full-stack, AI-augmented public grievance redressal portal built for state-level administrative governance. It accelerates citizen issue resolution through Groq-powered AI triage (`openai/gpt-oss-120b`) while strictly preserving **human-in-the-loop decision-making**: AI assists with classification, urgency, and summarization, but human administrators retain full authoritative control over official determinations, assignments, and closures.
+## 📌 Overview
 
-### Core Stack
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, React Router 7
-- **Backend:** FastAPI (Python 3.10+), Pydantic v2, SQLAlchemy 2.0, PyJWT, bcrypt
-- **Database:** Serverless PostgreSQL on Neon (free tier) / SQLite for fast local testing
-- **AI Engine:** Groq Cloud API with `openai/gpt-oss-120b` foundation model + labelled keyword fallback
-- **Attachment Storage:** Embedded in PostgreSQL (`bytea` / `LargeBinary`, <= 2 MB) with magic bytes validation
+**Janasevanam (ജനസേവനം)** is an AI-augmented public grievance redressal prototype designed for state-level citizen service delivery. It streamlines citizen complaint submission, automated AI triage, department routing, action tracking, and resolution auditing while enforcing strict human-in-the-loop oversight.
 
 ---
 
-## 🔑 Demo Login Accounts (Fictional Test Data)
+## 🌐 Live Demo
 
-All demo accounts use password **`Demo@123`**:
+| Component | URL |
+|---|---|
+| **Frontend Application** | `HOSTED_FRONTEND_URL` |
+| **Backend API & Swagger Docs** | `HOSTED_API_URL` |
 
-| Role | Email Address | Password | Permissions & Scope |
-|---|---|---|---|
-| **CMO Admin** | `cmo.admin@example.test` | `Demo@123` | Statewide overview, AI review & override, assignment, escalation, ATR decisions, analytics |
-| **Department Officer (PWD)** | `officer.pwd@example.test` | `Demo@123` | Public Works department queue, progress remarks, Action-Taken Report submission |
-| **Department Officer (Health)** | `officer.health@example.test` | `Demo@123` | Health and Family Welfare queue, progress remarks, ATR submission |
-| **Citizen** | `citizen.demo@example.test` | `Demo@123` | Grievance submission with AI triage, file upload, personal dashboard, rating & reopen |
-
-*Convenience Quick Logins:* The login page also features 1-click preset buttons for instant role switching without manual typing (`admin@janasevanam.example.test`, `officer@janasevanam.example.test`, `citizen@janasevanam.example.test`).
+> [!NOTE]
+> **Cold Start Notice:** The free-tier host spins down instances after a period of inactivity. The initial request or page load may take up to a minute to respond while containers warm up. If you encounter an initial delay or wake-up screen, please wait 30–60 seconds and refresh the page.
 
 ---
 
-## 🚀 Quick Start Guide
+## 🔑 Demo Logins
 
-### 1. Prerequisites
-- Python 3.10+
-- Node.js 20.18+ (with `npm` or `pnpm`)
-- Git
+All demo accounts use password: **`Demo@123`**  
+*(These are fictional test accounts seeded exclusively for evaluation and testing.)*
 
-### 2. Clone & Environment Setup
-```bash
-# Clone the repository
-git clone https://github.com/your-username/cm-kerala-grievance-portal.git
-cd cm-kerala-grievance-portal
+| Role | Name | Email Address | Department / Scope | Password |
+|---|---|---|---|---|
+| **CMO Admin** | Ananya Menon | `cmo.admin@example.test` | Chief Minister's Office (Statewide) | `Demo@123` |
+| **CMO Admin (Quick Login)** | Ananya Menon | `admin@janasevanam.example.test` | Chief Minister's Office (Preset) | `Demo@123` |
+| **Department Officer** | Ravi Kumar | `officer.pwd@example.test` | Public Works | `Demo@123` |
+| **Department Officer (Quick Login)** | Ravi Kumar | `officer@janasevanam.example.test` | Public Works (Preset) | `Demo@123` |
+| **Department Officer** | Dr. Lakshmi Nair | `officer.health@example.test` | Health and Family Welfare | `Demo@123` |
+| **Citizen** | Meera Krishnan | `citizen.demo@example.test` | Citizen Portal | `Demo@123` |
+| **Citizen (Quick Login)** | Meera Krishnan | `citizen@janasevanam.example.test` | Citizen Portal (Preset) | `Demo@123` |
+| **Citizen** | Arun Das | `arun.das@example.test` | Citizen Portal | `Demo@123` |
+| **Citizen** | Nila Thomas | `nila.thomas@example.test` | Citizen Portal | `Demo@123` |
+| **Citizen** | Devika Raj | `devika.raj@example.test` | Citizen Portal | `Demo@123` |
+| **Citizen** | Fahad Ali | `fahad.ali@example.test` | Citizen Portal | `Demo@123` |
 
-# Setup environment file
-cp .env.example .env
-```
+*(The login screen also provides 1-click quick-fill buttons for instant role switching without manual typing.)*
 
-### 3. Backend Setup & Run
+---
+
+## 🛠️ Tools and Services
+
+In accordance with disclosure requirements:
+- **AI Coding Assistant:** Antigravity (Google DeepMind)
+- **UI Design Tool:** Figma Make (used for baseline design token and layout export)
+- **AI Assistant Model:** **Groq Cloud** with `openai/gpt-oss-120b` (sub-second LPU inference, structured JSON output, low temperature `0.1`, wrapped in strict prompt-injection delimiters, with deterministic regex keyword fallback)
+- **Database Provider:** **Neon** (Serverless PostgreSQL with connection pooling)
+- **Hosting Providers:** Vercel / Render
+- **Frontend Framework & Libraries:** React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, React Router 7
+- **Backend Framework & Libraries:** FastAPI (Python 3.10+), Pydantic v2, SQLAlchemy 2.0, PyJWT, bcrypt, python-jose, python-multipart, httpx, uvicorn
+- **Testing Framework:** pytest 8.0, pytest-anyio
+
+---
+
+## ⚡ Quick-Start (Running Locally)
+
+### 1. Backend Setup
 ```bash
 cd backend
 
-# Install Python requirements
+# Create virtual environment and activate
+python -m venv venv
+# On Windows PowerShell: .\venv\Scripts\Activate.ps1
+# On macOS/Linux: source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+```
 
-# Seed the database (10 departments, demo users, 26 fictional grievances)
+### 2. Environment Variables
+Create a `.env` file in the project root or configure the following environment variable names (values should not be committed):
+- `DATABASE_URL` (PostgreSQL connection string or `sqlite:///./grievances.db` for local test)
+- `JWT_SECRET` (A strong random secret for signing authentication tokens)
+- `GROQ_API_KEY` (API key from Groq Cloud; if omitted, deterministic fallback activates automatically)
+- `GROQ_MODEL` (Defaults to `openai/gpt-oss-120b`)
+- `FRONTEND_ORIGIN` (CORS origin, e.g., `http://localhost:5173` or `*`)
+- `ENV` (`development` or `production`)
+
+### 3. Database Seeding
+Seed the 10 official government departments, demo users, and 26 realistic fictional grievances:
+```bash
 python -m app.seed
+```
 
-# Start the FastAPI server
+### 4. Running the Tests
+Run the complete automated test suite (18 test cases verifying security, workflow, AI triage, rate limiting, and RBAC):
+```bash
+pytest backend/tests -v
+```
+
+### 5. Start Backend Server
+```bash
 python -m uvicorn app.main:app --reload --port 8000
 ```
 - API Base: `http://localhost:8000`
-- Swagger / OpenAPI Docs: `http://localhost:8000/docs`
-- Health Probe: `http://localhost:8000/api/health`
+- Interactive OpenAPI Docs: `http://localhost:8000/docs`
+- Health Readiness Check: `http://localhost:8000/api/health`
 
-### 4. Frontend Setup & Run
+### 6. Start Frontend
+In a separate terminal:
 ```bash
-# Open a second terminal window
 cd frontend
 
 # Install Node dependencies
 npm install
 
-# Start Vite development server
+# Start development server
 npm run dev
 ```
 Open `http://localhost:5173` in your browser.
 
-### 5. Run Automated Test Suite (18 Tests)
-```bash
-cd backend
-python -m pytest -v
-```
-All **18 automated tests** will pass in ~10 seconds against an isolated in-memory test database.
-
 ---
 
-## 🏛️ System Architecture
+## 📚 Documentation
 
-```
-cm-kerala-grievance-portal/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app, CORS, rate limiting, error handlers
-│   │   ├── config.py            # Pydantic settings & env loader
-│   │   ├── db.py                # SQLAlchemy engine & session factory
-│   │   ├── models.py            # 10 core relational tables
-│   │   ├── schemas.py           # Pydantic v2 schemas & validators
-│   │   ├── security.py          # Direct bcrypt hashing, JWT issuance, require_role
-│   │   ├── seed.py              # 26 realistic fictional grievances seed script
-│   │   ├── routers/             # auth, public, ai, grievances, status, cmo, officer
-│   │   └── services/            # workflow, ai_assistant, duplicates, stats, uploads
-│   ├── tests/
-│   │   ├── conftest.py          # In-memory SQLite fixture with isolated session
-│   │   └── test_all_18.py       # Full 18 test cases per Section 8.2
-│   ├── requirements.txt
-│   └── pytest.ini
-├── frontend/                    # React 19 + TypeScript + Vite + Tailwind CSS v4
-│   ├── src/
-│   │   ├── pages/               # AuthPages, CitizenPages, CmoPages, OfficerPages, PublicPages
-│   │   ├── api.ts               # Resilient dual-mode API client (live backend + mock fallback)
-│   │   ├── components.tsx       # Governmental UI shell, status badges, timelines, modals
-│   │   ├── routes.tsx           # Role-based protected routes
-│   │   └── main.tsx             # React DOM entrypoint
-│   └── package.json
-├── DOCUMENTATION/               # Complete engineering documentation suite (7 markdown files)
-│   ├── 01_Project_Overview.md
-│   ├── 02_System_Architecture.md
-│   ├── 03_Database_Design.md
-│   ├── 04_API_Documentation.md
-│   ├── 05_AI_Integration.md
-│   ├── 06_Setup_and_Testing.md
-│   ├── 07_User_Guide.md
-│   └── images/
-│       ├── architecture_diagram.svg / .png
-│       └── er_diagram.svg / .png
-├── README.md
-├── .env.example
-└── .gitignore
-```
+Comprehensive architectural design and engineering specifications are located in the [DOCUMENTATION](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION) folder:
 
----
-
-## 🤖 AI Triage & Safety Architecture
-
-The portal leverages Groq's high-speed inference engine with `openai/gpt-oss-120b`:
-1. **Delimited Prompt-Injection Defense:** Citizen complaint text is wrapped in strict `<<<USER_GRIEVANCE>>>` delimiters, with system prompt instructing the model to treat content as untrusted raw data.
-2. **Deterministic Fallback Engine:** If the Groq API key is missing or encounters a timeout/rate limit, the system seamlessly engages an internal regex pattern classifier (`keyword_fallback_classifier`), flagged with `source: "fallback"` and a visible UI badge (*"Keyword fallback, not AI"*).
-3. **SHA-256 In-Memory Cache:** Avoids token waste by caching identical complaints by SHA-256 hash.
-4. **Duplicate Candidate Detection:** Compares new complaints against active open grievances in the same district from the previous 60 days using `difflib.SequenceMatcher`.
-5. **No Autonomous Authority:** AI suggestions are advisory only. Official status changes, department assignments, and resolutions require human administrative action.
-
----
-
-## ⚙️ Mandatory 5-State Workflow Lifecycle
-
-Enforced strictly in `backend/app/services/workflow.py` with `transition()`:
-
-```
-[Citizen Submit] 
-       ↓
-  (Submitted)
-       ↓  CMO Review & Confirm Category/Priority (SLA Computed)
- (Under Review)
-       ↓  CMO Forwards to Department & Officer
-  (In Progress) ←──────────────┐
-       │ (Progress Remarks)    │ CMO Returns ATR for Rework
-       │ (Officer Submits ATR) │
-       ↓                       │
-  [CMO Accepts ATR] ───────────┘
-       ↓
-   (Resolved)
-       ↓  Citizen Reopens with Reason
-   (Reopened) ──→ (Under Review)
-```
-
-- **SLA Deadlines:** High Priority = 3 days, Medium = 7 days, Low = 14 days.
-- **Overdue Flagging:** Grievances where `now > due_at` and status != `Resolved` are flagged as **Overdue** on the CMO dashboard.
-- **Immutable Audit Trail:** Every transition, remark, and escalation logs a row in `grievance_history`.
-
----
-
-## ☁️ Deployment Guide (Render + Neon)
-
-### 1. Database (Neon Serverless PostgreSQL)
-1. Create a free PostgreSQL project at [neon.tech](https://neon.tech) (choose Singapore region `ap-southeast-1`).
-2. Copy the connection string into `DATABASE_URL` in Render.
-
-### 2. Backend (Render Web Service)
-1. **Root Directory:** `backend`
-2. **Build Command:** `pip install -r requirements.txt`
-3. **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. **Environment Variables:**
-   - `DATABASE_URL`: Your Neon Postgres connection string
-   - `JWT_SECRET`: A secure 32+ character string
-   - `GROQ_API_KEY`: Your Groq API key
-   - `GROQ_MODEL`: `openai/gpt-oss-120b`
-   - `FRONTEND_ORIGIN`: Your frontend URL (or `*`)
-   - `ENV`: `production`
-
-### 3. Frontend (Render Static Site or Vercel)
-1. **Root Directory:** `frontend`
-2. **Build Command:** `npm install && npm run build`
-3. **Publish Directory:** `dist`
-4. **Environment Variable:** `VITE_API_URL=https://your-backend-api.onrender.com/api`
-5. **SPA Rewrites:** Included via `vercel.json` (rewrites `/*` to `/index.html`).
-
-> **Cold Start Note:** Free-tier services on Render suspend after 15 minutes of inactivity. Initial request can take ~45–60 seconds to spin up. A free pinger (e.g. cron-job.org) can be scheduled on `/api/health` every 10 minutes to maintain active status.
-
----
-
-## 🛠️ Tools and Services Disclosure
-In compliance with the assessment guidelines, the following tools and external services were utilized:
-- **Anthropic Claude & Coding Agent:** Technical planning and code generation.
-- **Groq Cloud:** Runtime LLM inference with `openai/gpt-oss-120b`.
-- **Neon:** Free serverless PostgreSQL hosting.
-- **FastAPI, SQLAlchemy, PyJWT, bcrypt:** Backend application framework and security.
-- **React, Vite, Tailwind CSS v4, Lucide React:** Frontend user experience.
-
----
-
-## 📚 Complete Documentation Sitemap
-Detailed architectural specifications and guides are located in the `DOCUMENTATION/` directory:
-- [01_Project_Overview.md](DOCUMENTATION/01_Project_Overview.md)
-- [02_System_Architecture.md](DOCUMENTATION/02_System_Architecture.md)
-- [03_Database_Design.md](DOCUMENTATION/03_Database_Design.md)
-- [04_API_Documentation.md](DOCUMENTATION/04_API_Documentation.md)
-- [05_AI_Integration.md](DOCUMENTATION/05_AI_Integration.md)
-- [06_Setup_and_Testing.md](DOCUMENTATION/06_Setup_and_Testing.md)
-- [07_User_Guide.md](DOCUMENTATION/07_User_Guide.md)
-- [System Architecture Diagram](DOCUMENTATION/images/architecture_diagram.png)
-- [Database ER Diagram](DOCUMENTATION/images/er_diagram.png)
-
+- [01. Project Overview](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/01_Project_Overview.md) — Scope, goals, user personas, and assessment alignment.
+- [02. System Architecture](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/02_System_Architecture.md) — Architectural patterns, request flow, and state machine diagrams.
+- [03. Database Design](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/03_Database_Design.md) — 10-table relational schema, entity relationships, constraints, and audit trails.
+- [04. API Documentation](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/04_API_Documentation.md) — Complete REST endpoint specifications, request/response formats, and error codes.
+- [05. AI Integration](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/05_AI_Integration.md) — Groq `openai/gpt-oss-120b` triage, prompt-injection defense, duplicate detection, and human override safeguards.
+- [06. Setup and Testing](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/06_Setup_and_Testing.md) — Step-by-step installation, test suite breakdown, and troubleshooting.
+- [07. User Guide](file:///C:/Users/hassa/Downloads/CM%20PUBLIC%20GRIEVANCE%20READDRESSAL%20PORTAL/DOCUMENTATION/07_User_Guide.md) — End-to-end user manuals for Citizens, CMO Administrators, and Department Officers.
