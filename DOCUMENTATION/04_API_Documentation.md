@@ -1,277 +1,394 @@
-# 04. API Documentation — CM Kerala Public Grievance Redressal Portal
+# 04. API Documentation
 
-Interactive OpenAPI/Swagger documentation is served at `/docs` and `/redoc` when the backend is running.
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional. Example values below are illustrative.
 
-All responses use standard HTTP status codes. Errors adhere strictly to:
-```json
-{
-  "detail": "Error description message",
-  "code": "ERROR_CODE_STRING"
-}
-```
+Interactive documentation (Swagger UI) is generated automatically by FastAPI at `/docs`, and ReDoc at `/redoc`, on the running backend.
 
 ---
 
-## 1. Authentication Endpoints (`/api/auth`)
+## 1. Conventions
 
-### 1.1 `POST /api/auth/register`
-Register a new citizen or officer account.
-- **Access:** Public
-- **Request Body (JSON):**
+| Item | Detail |
+|---|---|
+| Base path | `/api` |
+| Format | JSON, with camelCase field names. File uploads use `multipart/form-data` |
+| Authentication | `Authorization: Bearer <accessToken>` (JWT from login) |
+| Roles | `citizen`, `cmo_admin`, `officer`. "Public" means no token is needed |
+| Dates | ISO 8601 timestamps in UTC |
+| Pagination | Query parameters `page` (from 1) and `pageSize`; responses return `items`, `total`, `page`, `pageSize` |
+| Statuses | `Submitted`, `Under Review`, `In Progress`, `Resolved`, `Reopened` |
+| Priorities | `Low`, `Medium`, `High` |
+| Reference number | `CMK-2026-000123` |
+
+### 1.1 Error format
+
+Every error uses the same shape:
+
 ```json
-{
-  "name": "Meera Krishnan",
-  "email": "citizen.demo@example.test",
-  "mobile": "9847012345",
-  "password": "Password@123",
-  "role": "citizen"
-}
-```
-- **Success Response (`201 Created`):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "name": "Meera Krishnan",
-    "email": "citizen.demo@example.test",
-    "mobile": "9847012345",
-    "role": "citizen",
-    "department_id": null,
-    "is_active": true,
-    "created_at": "2026-11-17T14:30:00Z"
-  }
-}
+{ "detail": "Grievance not found", "code": "not_found" }
 ```
 
-### 1.2 `POST /api/auth/login`
-Authenticate with email and password to receive a Bearer JWT.
-- **Access:** Public
-- **Request Body (JSON):**
-```json
-{
-  "email": "cmo.admin@example.test",
-  "password": "Demo@123"
-}
-```
-- **Success Response (`200 OK`):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "name": "Ananya Menon",
-    "email": "cmo.admin@example.test",
-    "role": "cmo_admin",
-    "is_active": true
-  }
-}
-```
+| HTTP status | Meaning |
+|---|---|
+| 400 | Bad request |
+| 401 | Missing, invalid or expired token |
+| 403 | Role or ownership check failed |
+| 404 | Record not found |
+| 409 | Conflict, for example an invalid status transition or duplicate email |
+| 413 | Uploaded file too large (over 2 MB) |
+| 415 | File type not allowed (only JPG, PNG, PDF) |
+| 422 | Validation error (field details in `detail`) |
+| 429 | Too many requests (rate limit) |
+| 500 | Unexpected server error |
 
-### 1.3 `GET /api/auth/me`
-Retrieve profile of currently authenticated user.
-- **Access:** Any authenticated user (`Authorization: Bearer <token>`)
-- **Success Response (`200 OK`):** User profile object.
+## 2. Endpoint summary
+
+| Group | Method and path | Purpose | Access |
+|---|---|---|---|
+| Auth | POST `/auth/register` | Register a citizen | Public |
+| | POST `/auth/login` | Log in, receive a token | Public |
+| | GET `/auth/me` | Current user | Logged in |
+| Public | GET `/health` | Health check | Public |
+| | GET `/meta` | Districts, categories, statuses, priorities | Public |
+| | GET `/departments` | Department list | Public |
+| | GET `/stats/public` | Sample statistics for the home page | Public |
+| | POST `/contact` | Save a contact enquiry | Public |
+| | GET `/track/{referenceNo}` | Track a grievance | Public |
+| AI | POST `/ai/analyze` | AI grievance analysis | Citizen |
+| Citizen | POST `/grievances` | Submit a grievance | Citizen |
+| | GET `/grievances/mine` | List own grievances with counts | Citizen |
+| | GET `/grievances/{id}` | Own grievance detail | Citizen |
+| | POST `/grievances/{id}/feedback` | Feedback after resolution | Citizen |
+| | POST `/grievances/{id}/reopen` | Reopen a resolved grievance | Citizen |
+| | GET `/attachments/{id}` | Download an attachment | Owner, CMO, assigned officer |
+| Status | PATCH `/grievances/{id}/status` | Role-checked status update | CMO, officer |
+| CMO | GET `/cmo/grievances` | List with filters | CMO |
+| | GET `/cmo/grievances/{id}` | Full record | CMO |
+| | PATCH `/cmo/grievances/{id}/review` | Set final category and priority | CMO |
+| | POST `/cmo/grievances/{id}/assign` | Forward to department and officer | CMO |
+| | POST `/cmo/grievances/{id}/remarks` | Add a remark | CMO |
+| | POST `/cmo/grievances/{id}/escalate` | Escalate a grievance | CMO |
+| | POST `/cmo/reports/{assignmentId}/decision` | Accept or return an action report | CMO |
+| | GET `/cmo/stats` | Dashboard statistics | CMO |
+| Officer | GET `/officer/grievances` | Own department's grievances | Officer |
+| | GET `/officer/grievances/{id}` | Grievance detail | Officer |
+| | POST `/officer/grievances/{id}/progress` | Add a progress remark | Officer |
+| | POST `/officer/grievances/{id}/action-report` | Submit an action-taken report | Officer |
+
+### Minimum operations required by the brief
+
+| Required operation | Endpoint |
+|---|---|
+| Citizen registration and login | POST `/auth/register`, POST `/auth/login` |
+| Submit grievance | POST `/grievances` |
+| Retrieve and list grievances | GET `/grievances/mine`, GET `/cmo/grievances`, GET `/officer/grievances` |
+| Track a grievance by ID | GET `/track/{referenceNo}` |
+| Update grievance status | PATCH `/grievances/{id}/status` |
+| Retrieve departments | GET `/departments` |
+| Retrieve CMO statistics | GET `/cmo/stats` |
+| AI grievance analysis | POST `/ai/analyze` |
 
 ---
 
-## 2. Public Endpoints (`/api`)
+## 3. Authentication
 
-### 2.1 `GET /api/departments`
-Lists all 10 departments, their mandate descriptions, and featured flags.
-- **Access:** Public
-- **Success Response (`200 OK`):** Array of department objects.
+### POST `/api/auth/register`
+Create a citizen account. Public.
 
-### 2.2 `GET /api/stats/public`
-Aggregated counter statistics for the landing page.
-- **Access:** Public
-- **Response (`200 OK`):**
+Request:
 ```json
 {
-  "total": 1248,
-  "resolved": 914,
-  "inProgress": 246,
-  "averageDays": 6.2
+  "name": "Asha Nair",
+  "email": "asha.demo@example.test",
+  "mobile": "9876543210",
+  "password": "ChooseAStrongPassword1"
+}
+```
+Response `201`:
+```json
+{ "id": 12, "name": "Asha Nair", "email": "asha.demo@example.test", "role": "citizen" }
+```
+Errors: `409` email already registered; `422` invalid email, mobile number or short password.
+
+### POST `/api/auth/login`
+Request:
+```json
+{ "email": "asha.demo@example.test", "password": "ChooseAStrongPassword1" }
+```
+Response `200`:
+```json
+{
+  "accessToken": "<jwt>",
+  "tokenType": "bearer",
+  "user": { "id": 12, "name": "Asha Nair", "role": "citizen" }
+}
+```
+Errors: `401` wrong email or password. Logout is performed by the front end discarding the token.
+
+### GET `/api/auth/me`
+Returns the logged-in user (`id`, `name`, `email`, `role`, `departmentId` for officers).
+
+---
+
+## 4. Public endpoints
+
+### GET `/api/health`
+```json
+{ "status": "ok" }
+```
+
+### GET `/api/meta`
+```json
+{
+  "districts": ["Thiruvananthapuram", "Kollam", "..."],
+  "categories": ["Roads and Infrastructure", "Healthcare", "Education", "..."],
+  "statuses": ["Submitted", "Under Review", "In Progress", "Resolved", "Reopened"],
+  "priorities": ["Low", "Medium", "High"]
 }
 ```
 
-### 2.3 `GET /api/meta`
-Metadata listing all 14 Kerala districts, 10 categories, and 5 statuses.
-- **Access:** Public
+### GET `/api/departments`
+```json
+[
+  { "id": 1, "name": "Public Works", "description": "Roads, bridges and public buildings", "isFeatured": true }
+]
+```
 
-### 2.4 `POST /api/contact`
-Persists a public contact inquiry in the database.
-- **Access:** Public
-- **Request Body (JSON):** `{ "name": "...", "email": "...", "subject": "...", "message": "..." }`
+### GET `/api/stats/public`
+Sample statistics for the Home page, computed from stored data.
+```json
+{ "totalReceived": 25, "resolved": 6, "inProgress": 9, "averageDaysToResolve": 5.2 }
+```
 
-### 2.5 `GET /api/track/{reference_no}`
-Search public grievance progress by reference number (`CMK-YYYY-XXXXXX`).
-- **Access:** Public
-- **Security Rule:** Does not disclose private citizen contact info or internal administrative remarks.
-- **Success Response (`200 OK`):**
+### POST `/api/contact`
+Request:
+```json
+{ "name": "Ravi K", "email": "ravi.demo@example.test", "subject": "Question", "message": "How long does a review take?" }
+```
+Response `201`: `{ "id": 4, "message": "Enquiry received" }`. The enquiry is stored in `contact_enquiries`.
+
+### GET `/api/track/{referenceNo}`
+Public. Returns limited information only: no personal data and no internal remarks.
+
+Response `200`:
 ```json
 {
-  "id": "1",
-  "referenceNo": "CMK-2026-000001",
-  "district": "Ernakulam",
-  "category": "Roads and Infrastructure",
-  "subject": "Damaged road near the market junction",
+  "referenceNo": "CMK-2026-000123",
   "status": "In Progress",
-  "priority": "High",
   "department": "Public Works",
+  "submittedAt": "2026-11-10T08:30:00Z",
   "history": [
-    {
-      "timestamp": "2026-11-10T10:00:00Z",
-      "actorName": "Citizen",
-      "actorRole": "Citizen",
-      "toStatus": "Submitted",
-      "remark": "Grievance submitted and reference number generated.",
-      "visibility": "Public"
-    }
+    { "timestamp": "2026-11-10T08:30:00Z", "fromStatus": null, "toStatus": "Submitted", "remark": "Grievance submitted", "actorRole": "citizen" },
+    { "timestamp": "2026-11-11T05:10:00Z", "fromStatus": "Submitted", "toStatus": "Under Review", "remark": "Reviewed by CMO", "actorRole": "cmo_admin" }
   ]
 }
 ```
+Errors: `404` reference not found.
 
 ---
 
-## 3. AI Grievance Assistant (`/api/ai`)
+## 5. AI analysis
 
-### 3.1 `POST /api/ai/analyze`
-Triage grievance description text with Groq LLM (`openai/gpt-oss-120b`) with prompt-injection defense and heuristic fallback.
-- **Access:** Authenticated Citizen
-- **Request Body (JSON):**
+### POST `/api/ai/analyze`
+Role: citizen. Analyses a complaint and returns a suggestion. The result is a suggestion only and can be changed by the citizen before submitting and by the CMO later.
+
+Request:
 ```json
-{
-  "description": "Severe flooding on Aluva market road due to collapsed storm drainage culvert.",
-  "district": "Ernakulam"
-}
+{ "description": "The road near the market junction has large potholes and two bikes have fallen this week.", "district": "Palakkad" }
 ```
-- **Success Response (`200 OK`):**
+Response `200`:
 ```json
 {
   "category": "Roads and Infrastructure",
   "department": "Public Works",
   "priority": "High",
-  "summary": "Resident reports severe street flooding caused by a collapsed drainage culvert on Aluva market road.",
-  "confidence": 0.92,
-  "reasoning": "Identified critical civic infrastructure damage and flooding hazard.",
-  "source": "groq",
-  "model": "openai/gpt-oss-120b",
-  "duplicate_candidates": []
+  "summary": "Large potholes near the market junction are causing accidents and need urgent repair.",
+  "confidence": 0.87,
+  "reasoning": "Describes road damage that is causing injuries.",
+  "duplicateCandidates": [],
+  "source": "groq"
 }
 ```
+`source` is `groq` when the model answered, or `fallback` when the labelled keyword fallback was used. Limits: the description is capped at 2000 characters.
+
+Errors: `422` empty or too long text; `429` rate limit.
 
 ---
 
-## 4. Citizen Operations (`/api/grievances`)
+## 6. Citizen endpoints
 
-### 4.1 `POST /api/grievances`
-Submit a grievance with optional evidence upload (multipart form).
-- **Access:** Citizen
-- **Form Fields:** `district`, `category`, `subject`, `description`, `priority`, optional `file`
-- **Success Response (`201 Created`):** Grievance detail object with generated `referenceNo`.
+### POST `/api/grievances`
+Role: citizen. Content type `multipart/form-data`.
 
-### 4.2 `GET /api/grievances/mine`
-List all grievances submitted by the logged-in citizen.
-- **Access:** Citizen
+| Field | Required | Notes |
+|---|---|---|
+| district | yes | One of the 14 districts |
+| category | yes | One of the allowed categories |
+| subject | yes | Short title |
+| description | yes | Detailed complaint, up to 2000 characters |
+| file | no | JPG, PNG or PDF, up to 2 MB |
 
-### 4.3 `GET /api/grievances/{id}`
-Retrieve a single grievance record. Enforces object-level access (citizen can view only their own).
-- **Access:** Grievance Owner, CMO, Assigned Officer
-
-### 4.4 `POST /api/grievances/{id}/feedback`
-Submit 1–5 star rating and comments. Permitted **only** when grievance status is `Resolved`, and only once per grievance.
-- **Access:** Grievance Owner
-- **Request Body:** `{ "rating": 5, "comment": "Issue fixed promptly." }`
-
-### 4.5 `POST /api/grievances/{id}/reopen`
-Reopen a previously resolved grievance with justification. Permitted **only** from `Resolved`.
-- **Access:** Grievance Owner
-- **Request Body:** `{ "reason": "Pothole reappeared after monsoon downpour." }`
-
-### 4.6 `GET /api/attachments/{id}`
-Download binary attachment. Authorized strictly for Owner, CMO, and assigned Officer.
-
----
-
-## 5. CMO Administration (`/api/cmo`)
-
-### 5.1 `GET /api/cmo/grievances`
-List grievances with multi-parameter filtering (`status`, `district`, `category`, `priority`, `overdue`, `search`) and pagination (`page`, `limit`).
-- **Access:** CMO Admin
-
-### 5.2 `GET /api/cmo/grievances/{id}`
-Inspect full administrative grievance record, including internal history, AI analyses audit rows, assignments, and ATRs.
-- **Access:** CMO Admin
-
-### 5.3 `PATCH /api/cmo/grievances/{id}/review`
-CMO review confirming human choice of category and priority; moves status to `Under Review`.
-- **Access:** CMO Admin
-- **Request Body:** `{ "category": "Roads and Infrastructure", "priority": "High", "remark": "CMO confirmed priority." }`
-
-### 5.4 `POST /api/cmo/grievances/{id}/assign`
-Route grievance to department and nodal officer; moves status to `In Progress` and sets assignment state to `Assigned`.
-- **Access:** CMO Admin
-- **Request Body:** `{ "department_id": 1, "officer_id": 2, "remark": "Forwarded to PWD Division." }`
-
-### 5.5 `POST /api/cmo/grievances/{id}/remarks`
-Append administrative remark (Public or Internal) without altering workflow status.
-- **Access:** CMO Admin
-- **Request Body:** `{ "remark": "Inspection team contacted.", "visibility": "Internal" }`
-
-### 5.6 `POST /api/cmo/grievances/{id}/escalate`
-Mark grievance as `escalated = true` and log internal escalation entry.
-- **Access:** CMO Admin
-
-### 5.7 `POST /api/cmo/reports/{assignment_id}/decision`
-Review Action-Taken Report: accept (transitions status to `Resolved`, assignment to `Closed`) or return for rework (status stays `In Progress`, assignment to `Returned`).
-- **Access:** CMO Admin
-- **Request Body:** `{ "decision": "accept", "remark": "Work confirmed complete." }`
-
-### 5.8 `GET /api/cmo/stats`
-Analytics payload: total counts, pending, resolved, SLA overdue, and breakdowns by status, district, department, and priority.
-- **Access:** CMO Admin
-- **Response (`200 OK`):**
+Response `201`:
 ```json
 {
-  "total": 25,
-  "pending": 20,
-  "resolved": 5,
-  "overdue": 4,
-  "by_status": { "Submitted": 6, "Under Review": 5, "In Progress": 8, "Resolved": 5, "Reopened": 1 },
-  "by_priority": { "High": 8, "Medium": 11, "Low": 6 },
-  "by_district": [{ "name": "Thiruvananthapuram", "count": 4 }, ...],
-  "by_department": [{ "name": "Public Works", "count": 6 }, ...]
+  "id": 31,
+  "referenceNo": "CMK-2026-000031",
+  "status": "Submitted",
+  "priority": "High",
+  "dueAt": "2026-11-21T08:30:00Z",
+  "createdAt": "2026-11-18T08:30:00Z"
+}
+```
+The server generates the reference number, writes the first history row and stores a fresh AI analysis next to the citizen's final choice. Errors: `413`, `415`, `422`.
+
+### GET `/api/grievances/mine`
+Query: `page`, `pageSize`. Response:
+```json
+{
+  "counts": { "total": 4, "pending": 3, "resolved": 1 },
+  "items": [
+    {
+      "id": 31, "referenceNo": "CMK-2026-000031", "subject": "Damaged road near the market junction",
+      "district": "Palakkad", "category": "Roads and Infrastructure", "priority": "High",
+      "status": "Submitted", "department": null, "createdAt": "2026-11-18T08:30:00Z"
+    }
+  ],
+  "total": 4, "page": 1, "pageSize": 10
+}
+```
+
+### GET `/api/grievances/{id}`
+Own grievance only (`403` otherwise). Returns the full grievance, attachments (id, filename), the current department, and the history with **public remarks only**.
+
+### POST `/api/grievances/{id}/feedback`
+Allowed only when the status is Resolved, and only once.
+```json
+{ "rating": 4, "comment": "Issue fixed, thank you." }
+```
+Response `201`. Errors: `409` not resolved or feedback already given; `422` rating outside 1 to 5.
+
+### POST `/api/grievances/{id}/reopen`
+Allowed only from Resolved.
+```json
+{ "reason": "The road is damaged again after one week." }
+```
+Response `200` with the new status `Reopened`. Errors: `409` not resolved; `422` missing reason.
+
+### GET `/api/attachments/{id}`
+Returns the file with its content type. Allowed for the owning citizen, the CMO, and the officer assigned to that grievance. Others receive `403`.
+
+---
+
+## 7. Status update
+
+### PATCH `/api/grievances/{id}/status`
+Role: CMO or officer. Uses the same workflow function as every other status change.
+```json
+{ "status": "In Progress", "remark": "Site inspection scheduled", "visibility": "public" }
+```
+Response `200`: updated grievance with the new `status` and the new history entry.
+Errors: `403` role may not make this move or officer is not assigned; `409` invalid transition from the current status.
+
+---
+
+## 8. CMO endpoints
+
+All require the `cmo_admin` role.
+
+### GET `/api/cmo/grievances`
+Query parameters (all optional): `district`, `category`, `priority`, `status`, `overdue` (true or false), `search` (reference number), `page`, `pageSize`.
+
+Response:
+```json
+{
+  "items": [
+    {
+      "id": 31, "referenceNo": "CMK-2026-000031", "subject": "Damaged road near the market junction",
+      "district": "Palakkad", "category": "Roads and Infrastructure", "priority": "High", "status": "Submitted",
+      "department": null, "dueAt": "2026-11-21T08:30:00Z", "overdue": false, "escalated": false
+    }
+  ],
+  "total": 25, "page": 1, "pageSize": 10
+}
+```
+
+### GET `/api/cmo/grievances/{id}`
+Full record: complaint, citizen name, attachments, AI analysis (suggestion, source, final choices), the full history (public and internal remarks), assignments and action reports.
+
+### PATCH `/api/cmo/grievances/{id}/review`
+Confirms or overrides the AI suggestion and moves a Submitted or Reopened grievance to Under Review. Recalculates the due date from the final priority.
+```json
+{ "category": "Roads and Infrastructure", "priority": "High", "remark": "Confirmed AI suggestion" }
+```
+
+### POST `/api/cmo/grievances/{id}/assign`
+Forwards the grievance and moves it to In Progress.
+```json
+{ "departmentId": 1, "officerId": 7, "remark": "Please inspect and report within 3 days" }
+```
+Response `200`. Errors: `409` not in Under Review; `422` officer does not belong to the department.
+
+### POST `/api/cmo/grievances/{id}/remarks`
+```json
+{ "text": "Escalate if no response in 2 days", "visibility": "internal" }
+```
+`visibility` is `public` or `internal`. Internal remarks are never returned to citizens or the public tracker.
+
+### POST `/api/cmo/grievances/{id}/escalate`
+```json
+{ "remark": "Overdue by 2 days, escalating to the department head" }
+```
+Sets the escalated flag, adds an internal remark and a history row. The status does not change.
+
+### POST `/api/cmo/reports/{assignmentId}/decision`
+```json
+{ "decision": "accept", "remark": "Report verified" }
+```
+`decision` is `accept` (status becomes Resolved, assignment Closed) or `return` (status stays In Progress, assignment Returned; a remark is required).
+
+### GET `/api/cmo/stats`
+Statistics computed from stored data.
+```json
+{
+  "total": 25, "pending": 14, "resolved": 6, "overdue": 3,
+  "byDistrict": [ { "district": "Palakkad", "count": 4 } ],
+  "byDepartment": [ { "department": "Public Works", "count": 7 } ],
+  "byStatus": [ { "status": "In Progress", "count": 9 } ],
+  "trend": [ { "date": "2026-11-17", "count": 3 } ]
 }
 ```
 
 ---
 
-## 6. Department Officer Operations (`/api/officer`)
+## 9. Officer endpoints
 
-### 6.1 `GET /api/officer/grievances`
-List grievances assigned to the logged-in officer's department.
-- **Access:** Department Officer
+All require the `officer` role and are limited to the officer's own department.
 
-### 6.2 `GET /api/officer/grievances/{id}`
-View grievance assigned to officer's department. Returns HTTP 403 if assigned to another department.
-- **Access:** Department Officer
+### GET `/api/officer/grievances`
+Query: `page`, `pageSize`. Returns grievances forwarded to the officer's department with due date, overdue flag and assignment state (`Assigned`, `Report Submitted`, `Returned`, `Closed`).
 
-### 6.3 `POST /api/officer/grievances/{id}/progress`
-Log progress notes or field inspection updates to grievance history.
-- **Access:** Department Officer
-- **Request Body:** `{ "remark": "Site inspection scheduled for 10:00 AM." }`
+### GET `/api/officer/grievances/{id}`
+Complaint details, attachments, CMO instructions and remarks visible to officers, and the history. Another department's grievance returns `403`.
 
-### 6.4 `POST /api/officer/grievances/{id}/action-report`
-Submit final Action-Taken Report with optional evidence document. Sets assignment state to `Report Submitted`.
-- **Access:** Department Officer
-- **Form Fields:** `report` (text), optional `file`
+### POST `/api/officer/grievances/{id}/progress`
+```json
+{ "remark": "Inspection done. Repair material ordered.", "visibility": "public" }
+```
+The status stays In Progress and a history row is written.
+
+### POST `/api/officer/grievances/{id}/action-report`
+Content type `multipart/form-data`: `reportText` (required) and `file` (optional JPG, PNG or PDF up to 2 MB). Sets the assignment state to Report Submitted, ready for CMO review.
+
+Response `201`: `{ "assignmentId": 15, "state": "Report Submitted" }`.
 
 ---
 
-## 7. Operations (`/api/health`)
-### 7.1 `GET /api/health`
-Health readiness probe.
-- **Access:** Public
-- **Response (`200 OK`):** `{ "status": "ok", "service": "...", "timestamp": "...", "env": "..." }`
+## 10. Rate limits
 
+Login, contact and AI analysis endpoints are rate limited. Exceeding a limit returns `429` with the standard error body; the front end shows a friendly retry message.
+
+## 11. Security summary for API consumers
+
+- Always send the token as a Bearer header; tokens expire and must be refreshed by logging in again.
+- A valid token is not enough: role and ownership are checked on every request.
+- Never send real personal data; this is a prototype with fictional data.

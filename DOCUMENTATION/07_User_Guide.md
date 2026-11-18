@@ -1,105 +1,157 @@
-# 07. User Guide — CM Kerala Public Grievance Redressal Portal
+# 07. User Guide
 
-This guide provides step-by-step walkthroughs for each of the three user roles in the recruitment prototype.
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional. Please do not enter real personal information or real complaints.
 
----
-
-## 1. Demo Credentials (Test Only)
-
-All accounts use fictional credentials ending in `.example.test` with password `Demo@123`:
-
-| Role | Email Address | Password | Department / Scope |
-|---|---|---|---|
-| **CMO Admin** | `cmo.admin@example.test` | `Demo@123` | Statewide Administration, All Departments |
-| **Department Officer (PWD)** | `officer.pwd@example.test` | `Demo@123` | Public Works Department |
-| **Department Officer (Health)** | `officer.health@example.test` | `Demo@123` | Health and Family Welfare |
-| **Citizen** | `citizen.demo@example.test` | `Demo@123` | Public Submissions & Tracking |
-
-*Tip: The login screen also features 1-click role presets for immediate testing.*
+This guide explains how citizens, CMO administrators and department officers use Janasevanam (ജനസേവനം). Demo login details are in the root `README.md`.
 
 ---
 
-## 2. Citizen Walkthrough
+## 1. Before you start
 
-### Step 1: Submit a Grievance with AI Triage
-1. Navigate to `/login` and sign in as `citizen.demo@example.test` (or register a new account at `/register`).
-2. Click **Submit Grievance** in the navigation bar.
-3. Select your **District** (e.g. *Ernakulam*) and begin typing your description:
-   > *"Severe water leak from main distribution pipeline near Aluva junction. Water is gushing onto the road and flooding nearby shops."*
-4. Click **Get AI suggestion**:
-   - The Groq AI model (`openai/gpt-oss-120b`) analyzes your text in sub-second time.
-   - The card shows suggested category (*Water Supply*), suggested department (*Water Resources*), and urgency priority (*High*).
-   - If Groq is unreachable, the system automatically uses the labelled keyword fallback.
-5. Review the suggestion. You are free to keep it or override the category.
-6. (Optional) Attach a supporting photo or PDF (max 2 MB).
-7. Click **Submit Grievance**.
-8. A confirmation screen appears showing your unique reference ID: `CMK-2026-XXXXXX`. Click **Copy Reference ID**.
+- **First load can be slow.** The application is hosted on a free service that may sleep when idle. If the page seems stuck, wait up to a minute; a message says the server is waking up.
+- **Use the demo accounts.** Test accounts exist for a citizen, a CMO administrator and department officers. You can also register your own citizen account.
+- **Statuses.** Every grievance is in one of five statuses:
 
-### Step 2: Track Progress
-- **Anonymous Tracking:** Go to `/track` and paste `CMK-2026-XXXXXX` into the search box. View the department assignment, status badge, and public timeline.
-- **Citizen Dashboard:** Go to `/citizen` to view your active complaints, resolution cards, and detailed timeline history.
+| Status | Meaning |
+|---|---|
+| Submitted | The citizen has submitted it; waiting for CMO review |
+| Under Review | The CMO is reviewing it |
+| In Progress | It has been forwarded to a department and the officer is working on it |
+| Resolved | The CMO accepted the department's action-taken report |
+| Reopened | The citizen reopened a resolved grievance; it goes back to CMO review |
 
-### Step 3: Provide Feedback or Reopen
-- Once the CMO accepts the department's action report and the status updates to **Resolved**:
-  - Open the grievance detail view.
-  - Fill out the **Citizen Feedback** card (1 to 5 star rating and comments).
-  - If the problem recurs, click **Reopen Grievance**, explain what happened, and submit. The grievance moves to **Reopened** for CMO re-examination.
+- **AI suggestions.** Wherever you see "AI suggestion", it is only a recommendation. You can change it, and the CMO makes the final decision.
 
 ---
 
-## 3. CMO Administrator Walkthrough
+## 2. Everyone: public pages
 
-### Step 1: Monitor Queue & SLA Overdue Indicators
-1. Log in as `cmo.admin@example.test`.
-2. The CMO dashboard displays aggregate metrics:
-   - **Total Grievances**, **Pending Review**, **Resolved**, and **SLA Overdue**.
-   - Interactive breakdown charts by District, Department, Priority, and Status.
-3. Use the filter bar to isolate `Submitted`, `Under Review`, or `Overdue` grievances.
-
-### Step 2: Review AI Suggestions & Set Final Priority
-1. Click on a grievance with status `Submitted`.
-2. Inspect the **AI Triage Suggestion Panel**:
-   - Review AI Summary, Suggested Department, and Confidence score.
-3. Click **Review & Confirm**:
-   - Select the final authoritative category and priority (High: 3-day SLA, Medium: 7-day, Low: 14-day).
-   - The status transitions to **Under Review**, and `due_at` is recalculated.
-
-### Step 3: Assign to Department & Officer
-1. On the grievance detail page, click **Assign Department**.
-2. Choose the responsible department (e.g. *Public Works*) and optionally a nodal officer (e.g. *Ravi Kumar*).
-3. Add routing remarks and click **Confirm Assignment**.
-4. The grievance transitions to **In Progress** with assignment state **Assigned**.
-
-### Step 4: Escalate or Add Internal Remarks
-- If a grievance is overdue or sensitive, click **Escalate**. This sets `escalated = true` and logs an internal remark visible only to CMO administrators.
-- Use the **Add Administrative Remark** tool to add confidential internal notes or public citizen advisories.
-
-### Step 5: Review Action-Taken Report (ATR)
-1. When the department officer completes their work, the assignment state updates to **Report Submitted**.
-2. Inspect the officer's report text and any uploaded evidence document.
-3. Choose one of two actions:
-   - **Accept Report:** Status changes to **Resolved**, assignment state changes to **Closed**, and the citizen sees the resolution on their tracker.
-   - **Return for Rework:** Status stays **In Progress**, assignment state updates to **Returned**, and the officer is alerted to conduct additional site inspection.
+| Page | What you can do |
+|---|---|
+| Home | Read the introduction, see sample statistics and featured departments, and use the Submit Grievance and Track Grievance buttons |
+| About Us | Read the purpose, vision, mission and objectives |
+| How It Works | See the steps from submission to resolution |
+| Departments | Browse the sample departments |
+| Contact Us | Send a message with your name, email, subject and message. It is saved for the administrators |
+| FAQ | Read answers to common questions |
+| Track Grievance | Enter a reference number to see the status, department and public history. No login needed |
 
 ---
 
-## 4. Department Officer Walkthrough
+## 3. Citizen guide
 
-### Step 1: Access Assigned Departmental Work
-1. Log in as `officer.pwd@example.test` (password: `Demo@123`).
-2. The Officer workspace displays **only** grievances routed to the officer's department (*Public Works*).
-3. Grievances belonging to other departments are inaccessible (enforced by server-side RBAC).
+### 3.1 Register and log in
+1. Choose **Register**.
+2. Enter your full name, email, a 10-digit mobile number and a password (at least 8 characters), then confirm the password.
+3. Log in with your email and password. You land on your dashboard.
+4. Use the user menu to **log out** when you finish.
 
-### Step 2: Record Progress Updates
-1. Click on an active grievance.
-2. In the **Add Progress Remark** form, type investigation updates (e.g. *"Site inspection completed; raw materials ordered for culvert rebuilding"*).
-3. Click **Save Progress**. The update appears immediately in the audit timeline.
+### 3.2 Submit a grievance
+1. Choose **Submit Grievance**.
+2. Select your **district** and a **category**.
+3. Write a short **subject** and a detailed **description** (up to 2000 characters).
+4. Optionally click **Get AI suggestion**. The assistant proposes a category, department, priority and a summary. Read it, and change the category if it is wrong. The label tells you whether it came from the AI model or from the keyword fallback.
+5. Optionally attach one image or document (JPG, PNG or PDF, up to 2 MB).
+6. Click **Submit**.
+7. Save the **reference number** shown (for example `CMK-2026-000123`). Use the copy button, and keep it to track your grievance.
 
-### Step 3: Submit Action-Taken Report (ATR)
-1. Once repairs or administrative actions are complete, navigate to the **Action-Taken Report** section.
-2. Describe the completed remediation:
-   > *"Reconstruction of road culvert completed on 17 Nov 2026. Tarring finished and traffic restored. Service inspected by junior engineer."*
-3. (Optional) Attach a completion photo or signed inspection PDF.
-4. Click **Submit Action Report**.
-5. The assignment state updates to **Report Submitted** and moves to the CMO's desk for final sign-off.
+### 3.3 Track a grievance
+- Without logging in: open **Track Grievance**, enter the reference number and read the status, the assigned department and the history.
+- Logged in: open your dashboard and click the grievance for full details.
 
+### 3.4 Your dashboard
+- Cards show how many grievances you submitted, how many are pending and how many are resolved.
+- The list shows each grievance with its status. Click one to see the complaint, the attachment, the department, the public remarks from the CMO and officers, and the history timeline.
+
+### 3.5 Feedback and reopening
+- When a grievance is **Resolved**, a feedback form appears. Give a rating from 1 to 5 stars and an optional comment. Feedback can be given once.
+- If the problem is not really fixed, click **Reopen grievance** and explain why. The status becomes Reopened and the CMO reviews it again.
+
+---
+
+## 4. CMO administrator guide
+
+### 4.1 Log in and read the overview
+Log in with the CMO account. The overview shows:
+- Count cards: **total, pending, resolved and overdue** grievances
+- Charts: grievances by district, by department and by status, and a trend over time (all from stored data)
+- A table of all grievances
+
+### 4.2 Find grievances
+Use the filters for **district, category, priority and status**, the overdue toggle, or search by reference number. Click **Reset** to clear the filters.
+
+### 4.3 Open a grievance
+Click a row to open the grievance. You will see:
+1. The complaint, the citizen's name, and any attachments (click to view or download)
+2. The **AI analysis**: summary, suggested category, department and priority, the confidence, the source label and any possible duplicates
+3. The history timeline with every change, who made it and when, and whether each remark is public or internal
+
+### 4.4 Review the AI suggestion
+1. Read the AI summary and suggestions.
+2. Click **Accept**, or **Override** and choose the final category and priority.
+3. Confirm to move the grievance to **Under Review**. The due date is set from the final priority (High 3 days, Medium 7, Low 14).
+
+### 4.5 Forward to a department
+1. Choose the **department** and then an **officer** of that department.
+2. Optionally add instructions.
+3. Click **Forward**. The status becomes **In Progress**.
+
+### 4.6 Remarks and escalation
+- **Add a remark** and choose **Public** (the citizen can see it) or **Internal** (only the CMO and officers can see it).
+- For a delayed grievance, click **Escalate** and confirm. This marks it as escalated and records an internal remark. The status does not change.
+
+### 4.7 Review the department's report
+When the officer submits an action-taken report, it appears on the grievance:
+- Click **Accept and mark Resolved** if the work is satisfactory. The status becomes **Resolved**, and the citizen sees the update.
+- Click **Return for rework** and write a remark (required) if it is not. The grievance stays In Progress and the officer sees a banner asking for rework.
+
+### 4.8 Statistics
+Use the charts and counts for district-wise and department-wise views and to find overdue grievances.
+
+---
+
+## 5. Department officer guide
+
+### 5.1 Log in and open your list
+Log in with the officer account given to you. You see only grievances forwarded to **your department**, with due dates and an assignment state: **Assigned, Report Submitted, Returned or Closed**. Overdue items are highlighted.
+
+### 5.2 Review a grievance
+Open a grievance to read the complaint, view attachments and read the CMO's instructions and remarks that are visible to officers.
+
+### 5.3 Add progress
+Use the progress form to add an investigation remark. The status stays **In Progress** and the remark is recorded in the history. Choose whether the remark is public (visible to the citizen) or internal.
+
+### 5.4 Submit an action-taken report
+1. Write the report describing what was done.
+2. Optionally attach a supporting file (JPG, PNG or PDF, up to 2 MB).
+3. Click **Submit to CMO**. The assignment state becomes **Report Submitted**.
+4. The CMO reviews it. If it is accepted, the grievance becomes Resolved. If it is returned, a banner shows the CMO's remark, and you can update and submit the report again.
+
+---
+
+## 6. Typical journey at a glance
+
+1. Citizen submits a grievance and receives a reference number.
+2. CMO reviews it and confirms or changes the AI suggestions.
+3. CMO forwards it to a department and officer.
+4. Officer investigates, adds remarks and submits an action-taken report.
+5. CMO reviews the report: accepts it (Resolved) or returns it for rework.
+6. Citizen sees the update, gives feedback or reopens the grievance.
+
+---
+
+## 7. Help and troubleshooting
+
+| Problem | What to do |
+|---|---|
+| The page is slow on the first visit | Wait up to a minute and refresh; the free host was asleep |
+| "AI suggestion" says keyword fallback | The AI service was unavailable. You can still submit; the CMO will review it |
+| My upload was rejected | Use a JPG, PNG or PDF of at most 2 MB |
+| I cannot open a grievance | You can only open your own grievances (citizen) or your own department's (officer) |
+| I forgot my reference number | Log in and open your dashboard; all your grievances are listed there |
+| I cannot give feedback | Feedback is available only after the grievance is Resolved, and only once |
+| I cannot reopen | Only Resolved grievances can be reopened |
+
+## 8. Privacy and prototype notice
+
+This is a recruitment prototype. Use fictional text only, and do not enter real names, phone numbers, addresses or real complaints. Nothing here is connected to, authorised by or endorsed by the Government of Kerala or the Chief Minister's Office.

@@ -1,116 +1,164 @@
-# 06. Setup and Testing Guide — CM Kerala Public Grievance Redressal Portal
+# 06. Setup and Testing
 
-This guide provides step-by-step instructions for running the portal locally and executing the full automated test suite.
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional.
 
----
-
-## 1. System Prerequisites
-- **Python:** Version 3.10 or higher
-- **Node.js:** Version 20.18 or higher (with `npm` or `pnpm`)
-- **Git**
+This document covers installation, configuration, environment variables, test cases and a manual test script.
 
 ---
 
-## 2. Environment Configuration
-Copy the sample environment file to `.env`:
-```bash
-cp .env.example .env
+## 1. Prerequisites
+
+| Tool | Version |
+|---|---|
+| Python | 3.11 or newer |
+| Node.js and npm | A current LTS version |
+| PostgreSQL | A database URL, for example a free Neon project. For quick local runs without a database URL, the backend can use a local SQLite file |
+| Groq API key | Free key from the Groq console, for the live AI assistant. Without it, the labelled fallback is used |
+| Git | To clone the repository |
+
+## 2. Repository structure
+
+```
+.
+├── backend/               FastAPI application, seed script and tests
+├── frontend/              React application
+├── DOCUMENTATION/         These documents and the diagrams
+├── README.md
+└── .env.example           (a backend/.env.example is also provided)
 ```
 
-Key environment variables:
-| Variable | Description | Default / Example |
+## 3. Environment variables
+
+Create a `.env` file in `backend/` by copying `.env.example`, then fill in the values. **Never commit `.env`.** `.env.example` contains placeholders only.
+
+### Backend
+
+| Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string (or SQLite fallback) | `sqlite:///./grievances.db` |
-| `JWT_SECRET` | Secret key for JWT signing | `your-secure-random-secret-key-at-least-32-chars` |
-| `GROQ_API_KEY` | Groq Cloud API Key | `gsk_...` (leave blank to test fallback) |
-| `GROQ_MODEL` | Groq Model Name | `openai/gpt-oss-120b` |
-| `FRONTEND_ORIGIN` | Allowed CORS origins | `http://localhost:5173,http://localhost:8443,*` |
-| `ENV` | Environment identifier | `development` or `production` |
+| `DATABASE_URL` | Production: yes | PostgreSQL connection string (for Neon, with SSL enabled). If unset, a local SQLite file is used for development |
+| `JWT_SECRET` | Yes | Long random string used to sign tokens |
+| `GROQ_API_KEY` | For live AI | Groq API key |
+| `GROQ_MODEL` | No | Defaults to `openai/gpt-oss-120b` |
+| `FRONTEND_ORIGIN` | Yes (hosted) | URL of the front end, used for CORS. Defaults to `http://localhost:5173` for local work |
+| `PORT` | Hosted | Port the web service listens on (set by most hosts) |
 
----
+### Frontend
 
-## 3. Backend Setup
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Base URL of the backend API, for example `http://localhost:8000/api` locally or the hosted API URL |
 
-### 3.1 Install Python Dependencies
+Generate a secret for `JWT_SECRET` with: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+
+## 4. Run locally
+
+### 4.1 Backend
 ```bash
 cd backend
-python -m pip install -r requirements.txt
+python -m venv .venv
+# Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # then edit .env
+python -m app.seed          # loads fictional demo data (safe to run again)
+uvicorn app.main:app --reload --port 8000
 ```
+Check: open `http://localhost:8000/docs` for the interactive API documentation and `http://localhost:8000/api/health` for `{"status":"ok"}`.
 
-### 3.2 Seed Fictional Database
-Seed the 10 official departments, demo login accounts, and 26 realistic fictional grievances:
-```bash
-cd backend
-python -m app.seed
-```
-
-### 3.3 Run the FastAPI Development Server
-```bash
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
-```
-- API root: `http://localhost:8000`
-- Interactive OpenAPI Docs: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/api/health`
-
----
-
-## 4. Frontend Setup
-
-### 4.1 Install Dependencies
+### 4.2 Frontend
 ```bash
 cd frontend
 npm install
-```
-
-### 4.2 Start Frontend Development Server
-```bash
-cd frontend
+cp .env.example .env        # set VITE_API_URL
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+Open the address shown in the terminal (normally `http://localhost:5173`).
 
-### 4.3 Production Build Verification
-Verify that TypeScript compilation and bundle packaging succeed:
-```bash
-cd frontend
-npm run build
-```
+### 4.3 Demo accounts
+Test accounts for the citizen, CMO admin and officers are created by the seed script and listed in the root `README.md`. They are fictional and use the `example.test` email domain.
 
----
+## 5. Run the automated tests
 
-## 5. Automated Test Suite (18 Test Cases)
-
-The backend includes a comprehensive pytest suite in `backend/tests/test_all_18.py` covering all 18 requirements from Section 8.2 of the project brief.
-
-Tests run against an isolated in-memory SQLite database (`sqlite:///:memory:`) using `StaticPool` to ensure zero disk side-effects.
-
-### Running the Tests
 ```bash
 cd backend
-python -m pytest -v
+pytest -v
 ```
+The tests use an in-memory database and a mocked AI client, so they need no network, no API key and no database URL.
 
-### Test Case Verification Matrix
+Expected result for the current suite: **18 tests, all passing.**
 
-| # | Test Function Name | Assertion & Verification |
+## 6. Test cases
+
+| # | Area | Test case | Expected result |
+|---|---|---|---|
+| 1 | Auth | Register with valid data, then log in; try a wrong password | Registration succeeds; login returns a token; the wrong password returns 401 |
+| 2 | Auth | Register with an email that already exists | 409 conflict |
+| 3 | Access | A citizen opens another citizen's grievance | 403 |
+| 4 | Access | An officer opens a grievance of another department | 403 |
+| 5 | Access | A citizen calls a CMO endpoint | 403 |
+| 6 | Submission | Submit a grievance | 201, unique reference number, first history row |
+| 7 | Workflow | Full path Submitted, Under Review, In Progress, Resolved | Each step succeeds and history count matches |
+| 8 | Workflow | Make an invalid move (for example Submitted straight to Resolved) | 409 |
+| 9 | Workflow | Reopen a grievance that is not Resolved | 409; reopening from Resolved works |
+| 10 | Feedback | Give feedback before resolution, and twice after | 409 both times; the first valid feedback succeeds |
+| 11 | Overdue | A grievance with a due date in the past and status not Resolved | Counted as overdue; not counted once Resolved |
+| 12 | Escalation | CMO escalates a grievance | Flag set, status unchanged, history row written |
+| 13 | Uploads | Upload a wrong file type and an over-limit file | 415 and 413; a valid file is stored |
+| 14 | Privacy | Public tracker for a grievance that has internal remarks | Internal remarks and personal data are absent |
+| 15 | Statistics | CMO statistics against seeded data | Totals match the database |
+| 16 | AI | Analysis with the model mocked to return valid JSON | Suggestion returned with source `groq` |
+| 17 | AI | Analysis with the model mocked to fail | Result returned with source `fallback` |
+| 18 | AI | Model returns a category outside the allowed list | Output rejected and the fallback is used |
+
+## 7. Manual end-to-end test
+
+Run this on the local or hosted application with the demo accounts.
+
+| Step | Action | Expected result |
 |---|---|---|
-| 1 | `test_01_register_and_login_success_and_failure` | Verifies account creation (`201`), JWT issuance on valid login (`200`), and rejected login on bad password (`401`). |
-| 2 | `test_02_duplicate_email_rejected` | Asserts that registering a second user with the same email returns HTTP `400` with descriptive error. |
-| 3 | `test_03_citizen_cannot_open_another_citizens_grievance` | Validates object-level security: Citizen B querying Citizen A's grievance is rejected with HTTP `403`. |
-| 4 | `test_04_officer_cannot_see_another_departments_grievance` | Asserts that a PWD officer cannot access a Health and Family Welfare grievance (HTTP `403`). |
-| 5 | `test_05_citizen_cannot_call_cmo_endpoints` | Confirms RBAC enforcement: citizens calling `/api/cmo/grievances` receive HTTP `403 Forbidden`. |
-| 6 | `test_06_submit_creates_unique_reference_id_and_history_row` | Verifies grievance submission generates `CMK-YYYY-XXXXXX` and creates a `Submitted` history audit row. |
-| 7 | `test_07_full_happy_path_workflow` | Tests complete lifecycle across roles: `Submitted` → `Under Review` (CMO) → `In Progress` (Assigned) → ATR filed (Officer) → `Resolved` (CMO), verifying history count >= 4. |
-| 8 | `test_08_invalid_transition_returns_409` | Asserts state machine prevents jumping directly from `Submitted` to `Resolved` (returns HTTP `409 Conflict`). |
-| 9 | `test_09_reopen_only_from_resolved` | Verifies that reopening from `In Progress` fails (`409`), while reopening from `Resolved` succeeds. |
-| 10 | `test_10_feedback_only_after_resolved_only_once` | Confirms feedback before resolution is blocked (`400`), first feedback succeeds (`200`), and duplicate feedback is rejected (`400`). |
-| 11 | `test_11_overdue_calculation` | Asserts that grievances with `due_at < now` are identified and returned by the `?overdue=true` query. |
-| 12 | `test_12_escalation_writes_history` | Tests CMO escalation: sets `escalated = true` and creates an internal audit history row. |
-| 13 | `test_13_upload_rejects_wrong_type_and_oversized_file` | Validates rejection of disallowed file extensions/magic bytes and files exceeding the 2 MB threshold (`400`). |
-| 14 | `test_14_public_tracker_hides_internal_remarks` | Asserts public tracker `/api/track/{ref}` exposes public history while omitting `Internal` remarks. |
-| 15 | `test_15_cmo_stats_calculation` | Verifies that `/api/cmo/stats` returns accurate counts for total, pending, resolved, overdue, and department distributions. |
-| 16 | `test_16_ai_analyze_returns_valid_json_groq_mocked` | Mocks Groq API response and asserts structured triage JSON output (`source: groq`). |
-| 17 | `test_17_ai_fallback_is_used_and_labelled_when_groq_fails` | Simulates Groq timeout/outage and asserts fallback keyword classifier takes over with `source: fallback`. |
-| 18 | `test_18_ai_output_outside_allowed_lists_is_normalized` | Simulates LLM hallucinated categories/priorities and asserts backend normalizes to allowed enums. |
+| 1 | Open the Home page | Banner and footer disclaimer visible; statistics and departments load |
+| 2 | Register a new citizen and log in | Redirected to the citizen dashboard |
+| 3 | Open Submit Grievance, type a complaint, click "Get AI suggestion" | Suggestion appears with the source label (`AI suggestion`) |
+| 4 | Attach a small image and submit | Reference number shown (`CMK-2026-...`) |
+| 5 | Open Track Grievance without logging in and paste the number | Status, department and history are shown, no personal data |
+| 6 | Log in as the CMO | Counts and charts show stored data |
+| 7 | Open the new grievance | Attachment opens; AI summary with Accept and Override is shown |
+| 8 | Review it, then forward it to a department and an officer | Status becomes In Progress; history shows each step |
+| 9 | Add one internal and one public remark | Both are stored; only the public one appears to the citizen |
+| 10 | Log in as the assigned officer | Only that department's grievances are listed |
+| 11 | Add a progress remark and submit an action-taken report | Assignment state becomes Report Submitted |
+| 12 | Log in as the CMO and accept the report | Status becomes Resolved |
+| 13 | Log in as the citizen | Update and full history visible; feedback form shown |
+| 14 | Submit feedback, or reopen with a reason | Feedback saved, or the status becomes Reopened |
+| 15 | Refresh the browser on a deep link such as `/cmo` | The page loads correctly |
 
+## 8. Deployment
+
+| Part | Setup |
+|---|---|
+| Database | A managed PostgreSQL instance (for example Neon). Put its connection string in `DATABASE_URL` |
+| Backend | A Python web service. Root directory `backend`. Build command `pip install -r requirements.txt`. Start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set the environment variables above on the host |
+| Frontend | A static site. Build command `npm install && npm run build`; publish directory is the build output (`dist`). Set `VITE_API_URL`. Add a rewrite of all paths to `index.html` so direct links such as `/cmo` work after a refresh |
+| Seeding | Run `python -m app.seed` once against the production `DATABASE_URL` |
+| CORS | Set `FRONTEND_ORIGIN` on the backend to the deployed front-end URL |
+
+Free-tier web services can sleep when idle. The first request after a pause may take up to a minute, and the front end shows a "server is waking up" message while it waits. Free-tier databases can also pause briefly after idle time.
+
+## 9. Security checks before publishing
+
+- Search the repository for secrets: the prefix `gsk_`, `postgresql://` connection strings, and `JWT_SECRET=` with a real value. Nothing should be found outside `.env`.
+- Confirm `.env` and any local database file are listed in `.gitignore` and are not tracked.
+- Confirm `.env.example` contains placeholders only.
+- Use a dedicated API key for the hosted demo and revoke it after the assessment.
+
+## 10. Troubleshooting
+
+| Problem | Likely cause and fix |
+|---|---|
+| Backend does not start | Check `DATABASE_URL` and `JWT_SECRET` are set; check the Python version |
+| CORS error in the browser | `FRONTEND_ORIGIN` does not match the front-end URL exactly (including `https://` and no trailing slash) |
+| Login works locally but not when hosted | `VITE_API_URL` points to localhost; rebuild the front end with the hosted API URL |
+| First load is very slow | The free-tier host was asleep; wait up to a minute and refresh |
+| AI suggestion always says "Keyword fallback" | `GROQ_API_KEY` is missing or invalid, or the free-tier limit was reached |
+| Upload rejected | File must be JPG, PNG or PDF and at most 2 MB |
+| 404 on refresh of a front-end page | The static host needs the rewrite to `index.html` |
+| No data shown | Run the seed script against the correct database |

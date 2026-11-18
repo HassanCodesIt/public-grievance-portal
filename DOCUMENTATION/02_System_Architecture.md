@@ -1,140 +1,243 @@
-# 02. System Architecture — CM Kerala Public Grievance Redressal Portal
+# 02. System Architecture
 
-## 1. High-Level Architectural Layers
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional.
+
+This document describes the frontend, backend, database, APIs and AI architecture of Janasevanam.
+
+---
+
+## 1. Overview
+
+The system has four main parts: a React single-page application, a FastAPI backend that exposes a REST API, a PostgreSQL database, and the Groq API for AI analysis. The browser never talks to the database or to Groq directly; everything goes through the backend, which enforces authentication, roles and business rules.
+
+![System architecture diagram](images/architecture_diagram.png)
+
+The same diagram in Mermaid (rendered by GitHub):
 
 ```mermaid
-graph TD
-    subgraph ClientLayer ["Client Layer (React 19 + TypeScript)"]
-        UI_Citizen["Citizen Portal (/submit, /dashboard, /track)"]
-        UI_CMO["CMO Admin Dashboard (/cmo, /cmo/grievances/:id)"]
-        UI_Officer["Officer Workspace (/officer, /officer/grievances/:id)"]
-        UI_Public["Public Landing, FAQs & Stats (/, /departments, /contact)"]
-    end
-
-    subgraph SecurityGate ["Security & Middleware Gate"]
-        CORS["CORS Policy Middleware"]
-        RL["In-Memory Rate Limiter (IP-based)"]
-        JWT_MW["JWT Bearer Authentication & RBAC (require_role)"]
-        VAL["Pydantic v2 Schema & Magic-Byte File Validation"]
-    end
-
-    subgraph BackendAPI ["Application Layer (FastAPI Backend)"]
-        RouterAuth["Auth Router (/api/auth)"]
-        RouterPublic["Public Router (/api/departments, /api/track)"]
-        RouterCitizen["Grievances Router (/api/grievances)"]
-        RouterCMO["CMO Router (/api/cmo)"]
-        RouterOfficer["Officer Router (/api/officer)"]
-        RouterAI["AI Router (/api/ai/analyze)"]
-        
-        SM["Workflow State Machine (services/workflow.py)"]
-        StatsEngine["Aggregation & SLA Overdue Engine (services/stats.py)"]
-    end
-
-    subgraph AIEngine ["AI & Triage Layer"]
-        GroqLLM["Groq Cloud API (openai/gpt-oss-120b)"]
-        Cache["In-Memory SHA-256 Cache"]
-        Fallback["Rule-Based Keyword Fallback Classifier"]
-        DupEngine["Duplicate Detection Engine (difflib)"]
-    end
-
-    subgraph DataStorage ["Data & Persistence Layer"]
-        PG[(PostgreSQL on Neon / SQLite for Tests)]
-        BLOB[("PostgreSQL bytea (Embedded Attachments <= 2MB)")]
-    end
-
-    ClientLayer --> SecurityGate
-    SecurityGate --> BackendAPI
-    BackendAPI --> SM
-    BackendAPI --> StatsEngine
-    RouterAI --> Cache
-    Cache -->|Cache Miss| GroqLLM
-    GroqLLM -->|On Failure/Timeout| Fallback
-    RouterAI --> DupEngine
-    BackendAPI --> PG
-    BackendAPI --> BLOB
+flowchart LR
+  subgraph Users
+    C[Citizen]
+    M[CMO admin]
+    O[Department officer]
+    P[Public visitor]
+  end
+  subgraph Frontend["Frontend: React SPA (static hosting)"]
+    UI[Public pages, Citizen portal, CMO dashboard, Officer dashboard]
+    API[api client with JWT]
+  end
+  subgraph Backend["Backend: FastAPI (web service)"]
+    R[Routers: auth, public, grievances, cmo, officer, ai]
+    S[Security: JWT, role checks, object-level access, validation, rate limits]
+    SV[Services: workflow, ai_assistant, uploads, stats, duplicates]
+    FB[Labelled keyword fallback]
+  end
+  DB[(PostgreSQL on Neon)]
+  G[Groq API: openai/gpt-oss-120b]
+  C --> UI
+  M --> UI
+  O --> UI
+  P --> UI
+  UI --> API
+  API -->|HTTPS JSON, Bearer token| R
+  R --> S
+  R --> SV
+  SV -->|SQLAlchemy| DB
+  SV -->|analysis request| G
+  SV -.->|model failure| FB
 ```
 
----
+## 2. Frontend
 
-## 2. Component Breakdown
+| Item | Detail |
+|---|---|
+| Framework | React, with Tailwind CSS. The interface was designed in Figma Make and exported as the front-end project |
+| Routing | Public routes, and role-protected routes for citizen, CMO and officer areas. Login redirects by role; protected routes redirect to login |
+| Data access | One API module holds every call to the backend. Screens never call `fetch` directly |
+| Session | The JWT is attached to every request; it is cleared on logout and on a 401 response |
+| States | Every data screen has loading, empty, error (with retry) and success states |
+| Wake-up message | If the first request to the free-tier host is slow, a banner says the server is waking up |
+| Charts | Built from the statistics endpoint (stored data), never hard-coded numbers |
+| Accessibility | Labelled form fields, visible keyboard focus, status shown by text and colour |
+| Disclaimer | A prototype banner and footer line on every page |
 
-### 2.1 Frontend Client (React 19 + Vite + Tailwind CSS v4)
-- **Framework:** React 19 with Vite 8 development server and Rolldown/Rollup optimized bundling.
-- **Routing & State:** React Router 7 declarative routing with protected route guards by user role claim (`citizen`, `cmo_admin`, `officer`).
-- **Resilient Dual-Mode API Client (`api.ts`):** Talks directly to FastAPI backend over JSON and multipart `FormData`. If the backend is starting up (cold start) or offline, automatically switches to an in-memory mock store so all views remain responsive.
-- **Theme & UI:** Clean governmental design language with custom status badges (`status-submitted`, `status-under-review`, etc.), priority indicators, responsive modals, and accessible Lucide SVG iconography.
+Main screens: Home, About, How It Works, Departments, Contact, FAQ, Track, Register, Login, Submit Grievance, Citizen Dashboard and detail, CMO Overview and Grievance Detail, Officer Overview and Detail.
 
-### 2.2 API & Gateway (FastAPI + Pydantic v2)
-- **FastAPI Framework:** Asynchronous, self-documenting REST API with OpenAPI/Swagger interactive documentation at `/docs` and `/redoc`.
-- **Validation:** Pydantic v2 data models enforcing string length boundaries, Kerala district enums, category constraints, 10-digit Indian phone numbers, and strict status enums.
-- **Rate Limiting:** In-memory bucket rate limiter protecting login, public contact form, and AI triage endpoints from denial-of-service attempts.
-- **Attachment Sanitization (`uploads.py`):** Multi-stage validation checking file size (<= 2MB), allowed extensions (`.jpg`, `.jpeg`, `.png`, `.pdf`), content-type headers, and binary magic bytes (`\xff\xd8\xff`, `\x89PNG`, `%PDF`).
+## 3. Backend
 
-### 2.3 Persistence Layer (SQLAlchemy 2.0 + PostgreSQL / SQLite)
-- **Database Engine:** SQLAlchemy 2.0 ORM with declarative mapping and relationships.
-- **Production Target:** Serverless PostgreSQL on Neon with `pool_pre_ping=True` and connection resilience against serverless auto-suspend.
-- **Test Target:** Fully isolated in-memory SQLite database (`sqlite:///:memory:`) using `StaticPool` to ensure zero disk side-effects during rapid test runs.
-- **Internal Binary Storage:** Uploaded citizen evidence and officer action reports are stored directly in PostgreSQL as `bytea` (`LargeBinary`), eliminating dependency on external S3 buckets.
+The backend is a FastAPI application with a layered structure.
 
-### 2.4 AI Assistant Layer (Groq `openai/gpt-oss-120b`)
-- **Model:** Open-weights foundation model `openai/gpt-oss-120b` hosted on Groq's high-speed LPU infrastructure.
-- **Prompt Injection Defense:** Delimited input (`<<<USER_GRIEVANCE>>>`) instructed strictly as inert data to classify, not instructions to execute.
-- **Deterministic Fallback:** Keyword heuristic classifier with clearly labeled `source: "fallback"` if Groq rate limits, times out, or fails.
-- **Deduplication:** Text similarity matching against active grievances within the same district from the previous 60 days.
+```
+backend/
+  app/
+    main.py          application, CORS, router registration, startup
+    config.py        environment variables
+    db.py            engine and session
+    models.py        SQLAlchemy models
+    schemas.py       Pydantic request and response models
+    security.py      password hashing, JWT, role dependency
+    routers/         auth, public, grievances, cmo, officer, ai
+    services/        workflow, ai_assistant, duplicates, stats, uploads
+    seed.py          fictional demo data
+  tests/             pytest suite
+  requirements.txt
+```
 
----
+| Layer | Responsibility |
+|---|---|
+| Routers | Define REST endpoints, check roles, parse input and return responses |
+| Schemas | Validate input and shape output (camelCase JSON) |
+| Services | Business rules: the workflow transition function, AI analysis, uploads, statistics, duplicate detection |
+| Models and database layer | Persistence with SQLAlchemy |
+| Security | Password hashing, token creation and verification, role and object-level checks |
 
-## 3. End-to-End Request Flow Sequence
+### 3.1 Authentication and access control
+
+1. A user registers or logs in and receives a signed JWT containing the user id and role (`citizen`, `cmo_admin` or `officer`), valid for a limited time.
+2. The front end sends the token as a Bearer header.
+3. A role dependency on each protected route rejects users with the wrong role.
+4. Object-level checks go further: a citizen can open only their own grievances, and an officer only grievances assigned to their department.
+5. Passwords are stored as salted hashes. Secrets are read from environment variables only.
+
+### 3.2 The workflow engine
+
+One function, `transition()`, is the only code that changes a grievance status. It checks that the move is allowed for the current status and the caller's role, writes the new status, and always inserts a `grievance_history` row. Invalid moves return HTTP 409.
+
+| From | Action | To | Who |
+|---|---|---|---|
+| (new) | Submit grievance | Submitted | Citizen |
+| Submitted | Review; confirm or override AI suggestions | Under Review | CMO |
+| Under Review | Forward to department and officer | In Progress | CMO |
+| In Progress | Add progress or investigation remark | In Progress | Officer |
+| In Progress | Submit action-taken report | In Progress (assignment: Report Submitted) | Officer |
+| In Progress | Accept report | Resolved (assignment: Closed) | CMO |
+| In Progress | Return report for rework | In Progress (assignment: Returned) | CMO |
+| Resolved | Reopen with a reason | Reopened | Citizen |
+| Reopened | Review again | Under Review | CMO |
+| Any open status | Escalate | unchanged (escalated flag set) | CMO |
+
+```mermaid
+stateDiagram-v2
+  state "Under Review" as UnderReview
+  state "In Progress" as InProgress
+  [*] --> Submitted: citizen submits
+  Submitted --> UnderReview: CMO reviews
+  UnderReview --> InProgress: CMO forwards to department
+  InProgress --> InProgress: officer remark or report, CMO returns report
+  InProgress --> Resolved: CMO accepts report
+  Resolved --> Reopened: citizen reopens with reason
+  Reopened --> UnderReview: CMO reviews again
+  Resolved --> [*]
+```
+
+### 3.3 Overdue and escalation
+
+- Each grievance gets a due date from its priority using fictional targets: High 3 days, Medium 7 days, Low 14 days. The due date is recalculated when the CMO sets the final priority.
+- A grievance is **overdue** when the current time is past its due date and its status is not Resolved. This is computed in the query, so counts are always current.
+- Escalation sets an `escalated` flag, adds an internal remark and writes a history row.
+
+### 3.4 Remark visibility
+
+Each remark is stored in the history as `public` or `internal`. Citizens and the public tracker only ever receive public remarks.
+
+### 3.5 File handling
+
+Uploads accept JPG, PNG and PDF up to 2 MB. The server checks the extension, the content type and the file signature (magic bytes), then stores the bytes in the `attachments` table. Files are served only through an authorised endpoint, so only the owner, the CMO, or the assigned officer can download them. Storing files in the database keeps them safe on hosting platforms that do not keep local files.
+
+### 3.6 Error handling and reliability
+
+- One error format for every failure: `{ "detail": "...", "code": "..." }`
+- Validation errors return 422 with field details; forbidden access returns 403; missing records return 404; invalid workflow moves return 409
+- Rate limits on login, contact and AI endpoints
+- A health endpoint (`/api/health`) supports the front-end wake-up banner and uptime checks
+
+## 4. Database
+
+PostgreSQL on Neon holds all persistent data: users, departments, grievances, status history, assignments, attachments, action reports, feedback, enquiries and AI analyses. The full design and ER diagram are in `03_Database_Design.md`. Models are kept portable (string statuses, binary column for files), so automated tests can use an in-memory database while production uses PostgreSQL.
+
+## 5. API
+
+REST over HTTPS, JSON bodies (multipart for uploads), JWT bearer authentication, `/api` prefix. Interactive documentation is generated by FastAPI at `/docs`. The endpoint reference is in `04_API_Documentation.md`.
+
+## 6. AI architecture
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Citizen
-    participant FE as React Frontend
-    participant API as FastAPI Backend
-    participant AI as Groq / Fallback AI
-    participant DB as PostgreSQL Database
-    actor CMO as CMO Administrator
-    actor Officer as Department Officer
-
-    Citizen->>FE: Enters grievance description & district
-    Citizen->>FE: Clicks "Get AI Suggestion"
-    FE->>API: POST /api/ai/analyze
-    API->>AI: Triage complaint text inside delimiters
-    AI-->>API: JSON {category, department, priority, summary}
-    API-->>FE: Return AI suggestion (source: groq/fallback)
-    FE-->>Citizen: Display suggestion with edit/accept options
-
-    Citizen->>FE: Submits grievance (+ optional document)
-    FE->>API: POST /api/grievances (multipart)
-    API->>DB: Insert Grievance (status: Submitted)
-    API->>DB: Generate reference CMK-YYYY-XXXXXX
-    API->>DB: Store AiAnalysis & GrievanceHistory audit row
-    API-->>FE: Return grievance with reference number
-
-    CMO->>FE: Inspects pending list
-    FE->>API: GET /api/cmo/grievances?status=Submitted
-    API-->>FE: Return queue
-    CMO->>FE: Confirms category & priority
-    FE->>API: PATCH /api/cmo/grievances/:id/review
-    API->>DB: Status -> Under Review, recalculate SLA due_at
-
-    CMO->>FE: Forwards to Department & Officer
-    FE->>API: POST /api/cmo/grievances/:id/assign
-    API->>DB: Status -> In Progress, creates DepartmentAssignment
-
-    Officer->>FE: Views department queue
-    FE->>API: GET /api/officer/grievances
-    Officer->>FE: Submits Action-Taken Report (ATR)
-    FE->>API: POST /api/officer/grievances/:id/action-report
-    API->>DB: Assignment state -> Report Submitted
-
-    CMO->>FE: Reviews Officer ATR
-    FE->>API: POST /api/cmo/reports/:id/decision {decision: "accept"}
-    API->>DB: Status -> Resolved, Assignment -> Closed
-
-    Citizen->>FE: Views resolved grievance & gives feedback
-    FE->>API: POST /api/grievances/:id/feedback {rating: 5}
-    API->>DB: Insert CitizenFeedback record
+  participant Cz as Citizen (browser)
+  participant API as FastAPI
+  participant AI as ai_assistant service
+  participant G as Groq API
+  participant DB as PostgreSQL
+  Cz->>API: POST /api/ai/analyze (description, district)
+  API->>AI: analyse(text)
+  AI->>AI: check length, cache lookup
+  AI->>G: chat completion (strict JSON)
+  alt valid answer
+    G-->>AI: JSON suggestion
+    AI->>AI: validate against allowed lists
+  else failure, timeout or invalid output
+    AI->>AI: keyword fallback, source = fallback
+  end
+  AI-->>API: suggestion + source label
+  API-->>Cz: suggestion shown as "AI suggestion, you can change it"
+  Cz->>API: POST /api/grievances (final choices)
+  API->>AI: analyse again on the server
+  API->>DB: save grievance, history, AI analysis next to the citizen's choice
 ```
 
+The server repeats the analysis at submit time and stores it with the citizen's final choice, so the stored record never depends on what the browser sent. The CMO later accepts or overrides the suggestion. Full details are in `05_AI_Integration.md`.
+
+## 7. Request flows
+
+### 7.1 Submitting a grievance
+1. The citizen fills in the form and optionally requests an AI suggestion.
+2. The browser sends a multipart request with the fields and the optional file.
+3. The backend validates the input and the file, creates the grievance, generates the reference number, sets the due date, and runs the analysis.
+4. It writes the first history row (Submitted) and the AI analysis, then returns the reference number.
+
+### 7.2 Forwarding a grievance (CMO)
+1. The CMO reviews the grievance (status Under Review) and sets the final category and priority.
+2. The CMO chooses a department and officer. The backend creates an assignment (state Assigned), moves the status to In Progress through `transition()`, and writes a history row.
+
+### 7.3 Resolving a grievance
+1. The officer submits an action-taken report; the assignment state becomes Report Submitted.
+2. The CMO accepts it. The status becomes Resolved, the assignment is Closed, and the citizen sees the update and the history entry.
+
+## 8. Security architecture
+
+| Area | Measure |
+|---|---|
+| Passwords | Salted hashing, minimum length |
+| Sessions | Signed JWT with expiry, secret from the environment |
+| Access control | Role checks on every protected route plus object-level checks |
+| Input | Pydantic validation (lengths, enums, email, 10-digit mobile number) |
+| Uploads | Type, size and signature checks, authorised download only |
+| Browser access | CORS limited to the front-end origin |
+| Abuse | Rate limits on login, contact and AI endpoints |
+| Privacy | Public tracker returns no personal data and no internal remarks |
+| Secrets | Only in environment variables; `.env` files are ignored by git; `.env.example` has placeholders only |
+| AI | Complaint text treated as data, output validated, input length capped |
+
+## 9. Deployment architecture
+
+```mermaid
+flowchart LR
+  Browser --> Static["Static host: React build"]
+  Browser -->|HTTPS /api| ApiHost["Web service host: FastAPI"]
+  ApiHost --> Neon[(Neon PostgreSQL)]
+  ApiHost --> Groq[Groq API]
+```
+
+- The React build is served from a static host, so the page loads immediately.
+- The FastAPI service runs on a free-tier web service. Free-tier services can sleep when idle, so the first request after a pause may take up to a minute; the front-end shows a "server is waking up" message while it waits.
+- The database is a managed PostgreSQL instance (Neon), so data survives restarts.
+- Configuration is supplied through environment variables on each host (see `06_Setup_and_Testing.md`). Secrets are never stored in the repository.
+
+## 10. Non-functional notes
+
+| Topic | Approach |
+|---|---|
+| Performance | Indexed filter columns; AI results cached in memory by a hash of the text |
+| Maintainability | Business rules in services, thin routers, one API module on the front end |
+| Testability | Automated tests for workflow, access control, uploads and AI behaviour, with the model mocked |
+| Traceability | Immutable history rows for every status change |

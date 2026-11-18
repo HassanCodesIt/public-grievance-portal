@@ -1,289 +1,317 @@
-# 03. Database Design — CM Kerala Public Grievance Redressal Portal
+# 03. Database Design
 
-## 1. Entity-Relationship Diagram
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data is fictional.
 
-```mermaid
-erDiagram
-    users ||--o{ grievances : "submits"
-    users ||--o{ grievance_history : "records action"
-    users ||--o{ department_assignments : "assigned to / by"
-    users ||--o{ action_reports : "submits"
-    users ||--o{ attachments : "uploads"
-    departments ||--o{ users : "employs officers"
-    departments ||--o{ grievances : "assigned to"
-    departments ||--o{ department_assignments : "routes to"
-
-    grievances ||--|{ grievance_history : "tracks lifecycle"
-    grievances ||--o{ department_assignments : "has active/past assignments"
-    grievances ||--o{ attachments : "contains files"
-    grievances ||--o| citizen_feedback : "receives rating"
-    grievances ||--o{ ai_analyses : "audits AI triage"
-
-    department_assignments ||--o{ action_reports : "receives ATRs"
-    department_assignments ||--o{ attachments : "attaches ATR documents"
-
-    users {
-        int id PK
-        string name
-        string email UK
-        string mobile
-        string password_hash
-        string role
-        int department_id FK
-        boolean is_active
-        datetime created_at
-    }
-
-    departments {
-        int id PK
-        string name UK
-        text description
-        boolean is_featured
-    }
-
-    grievances {
-        int id PK
-        string reference_no UK
-        int citizen_id FK
-        string district
-        string category
-        string subject
-        text description
-        string priority
-        string status
-        datetime due_at
-        boolean escalated
-        int department_id FK
-        text ai_summary
-        datetime created_at
-        datetime updated_at
-    }
-
-    grievance_history {
-        int id PK
-        int grievance_id FK
-        string from_status
-        string to_status
-        text remark
-        string visibility
-        int actor_id FK
-        string actor_name
-        string actor_role
-        datetime created_at
-    }
-
-    department_assignments {
-        int id PK
-        int grievance_id FK
-        int department_id FK
-        int officer_id FK
-        int assigned_by FK
-        string state
-        datetime assigned_at
-    }
-
-    attachments {
-        int id PK
-        int grievance_id FK
-        int assignment_id FK
-        int uploaded_by FK
-        string kind
-        string filename
-        string content_type
-        int size
-        bytea data
-        datetime created_at
-    }
-
-    action_reports {
-        int id PK
-        int assignment_id FK
-        text text
-        int submitted_by FK
-        datetime submitted_at
-        string cmo_decision
-        text cmo_remark
-        datetime decided_at
-    }
-
-    citizen_feedback {
-        int id PK
-        int grievance_id FK,UK
-        int rating
-        text comment
-        datetime created_at
-    }
-
-    contact_enquiries {
-        int id PK
-        string name
-        string email
-        string subject
-        text message
-        datetime created_at
-    }
-
-    ai_analyses {
-        int id PK
-        int grievance_id FK
-        string input_hash
-        string category
-        string department
-        string priority
-        text summary
-        float confidence
-        text reasoning
-        string source
-        string model
-        text raw_json
-        string final_category
-        string final_priority
-        int reviewed_by FK
-        datetime created_at
-    }
-```
+Database: **PostgreSQL** (hosted on Neon). Access layer: SQLAlchemy. Tables are created automatically on startup and filled with fictional demo data by the seed script.
 
 ---
 
-## 2. Table Schemas & Constraints
+## 1. Entity overview
 
-### 2.1 `users`
-Stores all portal actors across roles (`citizen`, `cmo_admin`, `officer`).
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Unique user ID |
-| `name` | String(100) | NOT NULL | User's full name |
-| `email` | String(120) | UNIQUE, Index, NOT NULL | Account login email |
-| `mobile` | String(20) | NOT NULL | 10-digit Indian phone number |
-| `password_hash` | String(255) | NOT NULL | Direct bcrypt salted password hash |
-| `role` | String(30) | NOT NULL | Role: `citizen`, `cmo_admin`, `officer` |
-| `department_id` | Integer | FK(`departments.id`), NULL | Applicable to `officer` role |
-| `is_active` | Boolean | DEFAULT True, NOT NULL | Account active flag |
-| `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Account registration date |
+| Table | Purpose | Required by the brief |
+|---|---|---|
+| `users` | Citizens, CMO administrators and department officers | Users |
+| `departments` | Government departments (fictional) | Departments |
+| `grievances` | One row per submitted grievance | Grievances |
+| `grievance_history` | One row for every status change or remark | Grievance History |
+| `department_assignments` | Which department and officer a grievance was forwarded to | Department Assignments |
+| `attachments` | Uploaded files (grievance attachments and action-report files) | Attachments |
+| `citizen_feedback` | Rating and comment after resolution | Citizen Feedback |
+| `contact_enquiries` | Messages sent from the Contact Us form | Contact Enquiries |
+| `action_reports` | Action-taken reports submitted by officers and the CMO's decision | Supporting table |
+| `ai_analyses` | AI suggestions with the citizen's and CMO's final choices | Supporting table |
 
-### 2.2 `departments`
-The 10 official state departments responsible for grievance execution.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Department ID |
-| `name` | String(120) | UNIQUE, Index, NOT NULL | Official department title |
-| `description` | Text | NOT NULL | Department mandate & responsibilities |
-| `is_featured` | Boolean | DEFAULT True, NOT NULL | Displayed on public landing cards |
+## 2. ER diagram
 
-### 2.3 `grievances`
-Core entity tracking citizen complaints from submission through resolution.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Internal numeric identifier |
-| `reference_no` | String(40) | UNIQUE, Index, NULL (flushed) | Public identifier `CMK-YYYY-XXXXXX` |
-| `citizen_id` | Integer | FK(`users.id`), Index, NOT NULL | Foreign key of submitting citizen |
-| `district` | String(60) | Index, NOT NULL | One of 14 Kerala districts |
-| `category` | String(80) | Index, NOT NULL | One of 10 allowed categories |
-| `subject` | String(255) | NOT NULL | Complaint title (8–255 chars) |
-| `description` | Text | NOT NULL | Detailed grievance explanation |
-| `priority` | String(20) | Index, DEFAULT 'Medium', NOT NULL | Priority: `High`, `Medium`, `Low` |
-| `status` | String(30) | Index, DEFAULT 'Submitted', NOT NULL | `Submitted`, `Under Review`, `In Progress`, `Resolved`, `Reopened` |
-| `due_at` | DateTime | Index, NOT NULL | SLA deadline computed from priority |
-| `escalated` | Boolean | Index, DEFAULT False, NOT NULL | CMO administrative escalation flag |
-| `department_id` | Integer | FK(`departments.id`), Index, NULL | Responsible department |
-| `ai_summary` | Text | NULL | 1–2 sentence AI executive summary |
-| `created_at` | DateTime | Index, DEFAULT UTC NOW, NOT NULL | Submission timestamp |
-| `updated_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Last modification timestamp |
+![ER diagram](images/er_diagram.png)
 
-### 2.4 `grievance_history`
-Append-only audit trail logging every state transition, remark, and escalation.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | History entry identifier |
-| `grievance_id` | Integer | FK(`grievances.id`), Index, NOT NULL | Parent grievance |
-| `from_status` | String(30) | NULL | State prior to transition |
-| `to_status` | String(30) | NOT NULL | Target state after transition |
-| `remark` | Text | NOT NULL | Action justification / progress remark |
-| `visibility` | String(20) | DEFAULT 'Public', NOT NULL | `Public` or `Internal` (CMO only) |
-| `actor_id` | Integer | FK(`users.id`), NULL | User initiating the action |
-| `actor_name` | String(100) | NULL | Actor's display name |
-| `actor_role` | String(50) | NOT NULL | Role recorded at the moment of change |
-| `created_at` | DateTime | Index, DEFAULT UTC NOW, NOT NULL | Audit timestamp |
+The same diagram in Mermaid (rendered by GitHub):
 
-### 2.5 `department_assignments`
-Tracks routing of grievances to specific departments and nodal officers.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Assignment ID |
-| `grievance_id` | Integer | FK(`grievances.id`), Index, NOT NULL | Assigned grievance |
-| `department_id` | Integer | FK(`departments.id`), Index, NOT NULL | Target department |
-| `officer_id` | Integer | FK(`users.id`), Index, NULL | Assigned departmental officer |
-| `assigned_by` | Integer | FK(`users.id`), NOT NULL | CMO user who routed the assignment |
-| `state` | String(40) | DEFAULT 'Assigned', NOT NULL | `Assigned`, `Report Submitted`, `Returned`, `Closed` |
-| `assigned_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Assignment creation timestamp |
+```mermaid
+erDiagram
+  USERS ||--o{ GRIEVANCES : "submits (citizen)"
+  DEPARTMENTS ||--o{ USERS : "employs (officers)"
+  DEPARTMENTS ||--o{ GRIEVANCES : "current department"
+  GRIEVANCES ||--o{ GRIEVANCE_HISTORY : "has"
+  USERS ||--o{ GRIEVANCE_HISTORY : "acts as actor"
+  GRIEVANCES ||--o{ DEPARTMENT_ASSIGNMENTS : "forwarded as"
+  DEPARTMENTS ||--o{ DEPARTMENT_ASSIGNMENTS : "receives"
+  USERS ||--o{ DEPARTMENT_ASSIGNMENTS : "officer / assigned by"
+  DEPARTMENT_ASSIGNMENTS ||--o{ ACTION_REPORTS : "answered by"
+  GRIEVANCES ||--o{ ATTACHMENTS : "has"
+  DEPARTMENT_ASSIGNMENTS |o--o{ ATTACHMENTS : "report files"
+  GRIEVANCES ||--o| CITIZEN_FEEDBACK : "rated by"
+  GRIEVANCES ||--o{ AI_ANALYSES : "analysed by"
 
-### 2.6 `attachments`
-Binary document storage persisting files directly in the database (`bytea`).
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Attachment ID |
-| `grievance_id` | Integer | FK(`grievances.id`), Index, NOT NULL | Associated grievance |
-| `assignment_id` | Integer | FK(`department_assignments.id`), NULL | Optional link to action report |
-| `uploaded_by` | Integer | FK(`users.id`), NOT NULL | Submitting user ID |
-| `kind` | String(30) | DEFAULT 'grievance', NOT NULL | `grievance` or `action_report` |
-| `filename` | String(255) | NOT NULL | Original sanitized filename |
-| `content_type` | String(100) | NOT NULL | Verified MIME type |
-| `size` | Integer | NOT NULL | File size in bytes (max 2 MB) |
-| `data` | LargeBinary (`bytea`) | NOT NULL | Binary file contents |
-| `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Upload timestamp |
+  USERS {
+    int id PK
+    string name
+    string email UK
+    string mobile
+    string password_hash
+    string role
+    int department_id FK
+    boolean is_active
+  }
+  DEPARTMENTS {
+    int id PK
+    string name
+    string description
+    boolean is_featured
+  }
+  GRIEVANCES {
+    int id PK
+    string reference_no UK
+    int citizen_id FK
+    int department_id FK
+    string district
+    string category
+    string subject
+    text description
+    string priority
+    string status
+    datetime due_at
+    boolean escalated
+    text ai_summary
+    datetime created_at
+    datetime updated_at
+  }
+  GRIEVANCE_HISTORY {
+    int id PK
+    int grievance_id FK
+    string from_status
+    string to_status
+    text remark
+    string visibility
+    int actor_id FK
+    string actor_role
+    datetime created_at
+  }
+  DEPARTMENT_ASSIGNMENTS {
+    int id PK
+    int grievance_id FK
+    int department_id FK
+    int officer_id FK
+    int assigned_by FK
+    string state
+    datetime assigned_at
+  }
+  ACTION_REPORTS {
+    int id PK
+    int assignment_id FK
+    text report_text
+    int submitted_by FK
+    datetime submitted_at
+    string cmo_decision
+    text cmo_remark
+  }
+  ATTACHMENTS {
+    int id PK
+    int grievance_id FK
+    int assignment_id FK
+    int uploaded_by FK
+    string kind
+    string filename
+    string content_type
+    int size
+    binary data
+  }
+  CITIZEN_FEEDBACK {
+    int id PK
+    int grievance_id FK
+    int rating
+    text comment
+    datetime created_at
+  }
+  AI_ANALYSES {
+    int id PK
+    int grievance_id FK
+    string input_hash
+    string category
+    string department
+    string priority
+    text summary
+    float confidence
+    string source
+    string model
+    string final_category
+    string final_priority
+    int reviewed_by FK
+    datetime created_at
+  }
+  CONTACT_ENQUIRIES {
+    int id PK
+    string name
+    string email
+    string subject
+    text message
+    datetime created_at
+  }
+```
 
-### 2.7 `action_reports`
-Action-Taken Reports (ATRs) submitted by officers upon completing field tasks.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Report ID |
-| `assignment_id` | Integer | FK(`department_assignments.id`), Index, NOT NULL | Department assignment |
-| `text` | Text | NOT NULL | Action taken summary |
-| `submitted_by` | Integer | FK(`users.id`), NOT NULL | Officer who filed report |
-| `submitted_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Submission timestamp |
-| `cmo_decision` | String(30) | NULL | `accept` or `return` |
-| `cmo_remark` | Text | NULL | CMO review remarks |
-| `decided_at` | DateTime | NULL | Review decision timestamp |
+## 3. Table definitions
 
-### 2.8 `citizen_feedback`
-Citizen feedback submitted following resolution (strictly 1 feedback per grievance).
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Feedback ID |
-| `grievance_id` | Integer | FK(`grievances.id`), UNIQUE, Index, NOT NULL | 1-to-1 link to resolved grievance |
-| `rating` | Integer | NOT NULL (1 to 5) | Star rating |
-| `comment` | Text | NULL | Qualitative citizen comment |
-| `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Timestamp |
+Types are logical types; PostgreSQL maps them to its native types.
 
-### 2.9 `contact_enquiries`
-Public inquiries submitted via the public contact form.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Enquiry ID |
-| `name` | String(100) | NOT NULL | Contact name |
-| `email` | String(120) | NOT NULL | Contact email |
-| `subject` | String(200) | NOT NULL | Message subject |
-| `message` | Text | NOT NULL | Inquiry text |
-| `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Timestamp |
+### 3.1 `users`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| name | string | Full name |
+| email | string, unique | Login identifier |
+| mobile | string | 10-digit Indian mobile number |
+| password_hash | string | Salted hash, never the password |
+| role | string | `citizen`, `cmo_admin` or `officer` |
+| department_id | integer, FK to `departments` | Only for officers |
+| is_active | boolean | Account enabled |
 
-### 2.10 `ai_analyses`
-Auditing of all AI triage recommendations, confidence levels, and human overrides.
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | Integer | PK, Auto-increment, Index | Analysis ID |
-| `grievance_id` | Integer | FK(`grievances.id`), Index, NULL | Linked grievance (set on submit) |
-| `input_hash` | String(64) | Index, NOT NULL | SHA-256 hash of input text |
-| `category` | String(80) | NOT NULL | AI recommended category |
-| `department` | String(120) | NOT NULL | AI recommended department |
-| `priority` | String(20) | NOT NULL | AI recommended priority |
-| `summary` | Text | NOT NULL | AI generated summary |
-| `confidence` | Float | NOT NULL | Confidence score (0.0 to 1.0) |
-| `reasoning` | Text | NULL | Explanation of AI classification |
-| `source` | String(30) | NOT NULL | `groq` or `fallback` |
-| `model` | String(80) | NOT NULL | Model identifier |
-| `raw_json` | Text | NULL | Raw JSON returned by LLM |
-| `final_category` | String(80) | NULL | Final category set by human reviewer |
-| `final_priority` | String(20) | NULL | Final priority set by human reviewer |
-| `reviewed_by` | Integer | FK(`users.id`), NULL | CMO reviewer user ID |
-| `created_at` | DateTime | DEFAULT UTC NOW, NOT NULL | Analysis timestamp |
+### 3.2 `departments`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| name | string | For example Public Works |
+| description | text | Short description shown on the Departments page |
+| is_featured | boolean | Shown on the Home page |
 
+### 3.3 `grievances`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| reference_no | string, unique | Format `CMK-2026-000123`, created on the server |
+| citizen_id | integer, FK to `users` | Submitting citizen |
+| department_id | integer, FK to `departments` | Current department (null until forwarded) |
+| district | string | One of the 14 Kerala districts |
+| category | string | From the allowed category list |
+| subject | string | Short title |
+| description | text | Detailed complaint |
+| priority | string | `Low`, `Medium` or `High` |
+| status | string | `Submitted`, `Under Review`, `In Progress`, `Resolved`, `Reopened` |
+| due_at | timestamp | Based on priority |
+| escalated | boolean | Set by the CMO for delayed grievances |
+| ai_summary | text | Short summary for the CMO |
+| created_at, updated_at | timestamp | |
+
+### 3.4 `grievance_history`
+One row per status change or remark. Rows are only ever inserted, never edited, which keeps the lifecycle traceable.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| grievance_id | integer, FK | |
+| from_status, to_status | string | Equal when a remark is added without a status change |
+| remark | text | |
+| visibility | string | `public` (citizen can see) or `internal` (CMO and officers only) |
+| actor_id | integer, FK to `users` | Responsible user |
+| actor_role | string | Role at the time of the action |
+| created_at | timestamp | When it happened |
+
+### 3.5 `department_assignments`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| grievance_id | integer, FK | |
+| department_id | integer, FK | |
+| officer_id | integer, FK to `users` | Assigned officer |
+| assigned_by | integer, FK to `users` | The CMO user who forwarded it |
+| state | string | `Assigned`, `Report Submitted`, `Returned`, `Closed` |
+| assigned_at | timestamp | |
+
+### 3.6 `action_reports`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| assignment_id | integer, FK | |
+| report_text | text | Action taken |
+| submitted_by | integer, FK to `users` | Officer |
+| submitted_at | timestamp | |
+| cmo_decision | string | `accepted` or `returned` (empty until reviewed) |
+| cmo_remark | text | Required when returning a report |
+
+### 3.7 `attachments`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| grievance_id | integer, FK | |
+| assignment_id | integer, FK, nullable | Set for action-report files |
+| uploaded_by | integer, FK to `users` | |
+| kind | string | `grievance` or `action_report` |
+| filename, content_type | string | |
+| size | integer | Bytes, at most 2 MB |
+| data | binary | The file contents |
+
+### 3.8 `citizen_feedback`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| grievance_id | integer, FK, unique | One feedback per grievance |
+| rating | integer | 1 to 5 |
+| comment | text | |
+| created_at | timestamp | |
+
+### 3.9 `contact_enquiries`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| name, email, subject | string | |
+| message | text | |
+| created_at | timestamp | |
+
+### 3.10 `ai_analyses`
+| Column | Type | Notes |
+|---|---|---|
+| id | integer, PK | |
+| grievance_id | integer, FK | |
+| input_hash | string | Hash of the analysed text |
+| category, department, priority | string | What the AI (or fallback) suggested |
+| summary | text | Short summary for the CMO |
+| confidence | float | 0 to 1 |
+| source | string | `groq` or `fallback` |
+| model | string | Model name used |
+| final_category, final_priority | string | The human's final choice |
+| reviewed_by | integer, FK to `users` | Citizen or CMO who confirmed or overrode |
+| created_at | timestamp | |
+
+## 4. Relationships
+
+| Relationship | Cardinality | Meaning |
+|---|---|---|
+| users to grievances | one to many | A citizen submits many grievances |
+| departments to users | one to many | A department has many officers |
+| departments to grievances | one to many | The department a grievance is currently with |
+| grievances to grievance_history | one to many | Every status change and remark |
+| users to grievance_history | one to many | The responsible user of each entry |
+| grievances to department_assignments | one to many | A grievance can be forwarded more than once (rework, reopening) |
+| departments and users to department_assignments | one to many | Receiving department, officer and CMO user |
+| department_assignments to action_reports | one to many | Reports submitted for an assignment |
+| grievances to attachments | one to many | Supporting files |
+| department_assignments to attachments | one to many, optional | Files attached to action reports |
+| grievances to citizen_feedback | one to zero-or-one | One feedback after resolution |
+| grievances to ai_analyses | one to many | Initial analysis and later reviews |
+
+## 5. Constraints and indexes
+
+- Unique: `users.email`, `grievances.reference_no`, `citizen_feedback.grievance_id`
+- Foreign keys on every relationship above
+- Indexed columns for filters and dashboards: `grievances.district`, `category`, `priority`, `status`, `department_id`, `due_at`, `citizen_id`; `grievance_history.grievance_id`; `department_assignments.officer_id`
+- Value rules are enforced in the application: status, priority, role, visibility and assignment state come from fixed lists, and the feedback rating must be 1 to 5
+
+## 6. Design notes
+
+| Topic | Decision |
+|---|---|
+| Reference number | `CMK-` plus the year plus the grievance id padded to six digits, created in the same transaction as the insert |
+| History | Insert-only table; every change goes through the workflow function, so the lifecycle is always traceable |
+| Visibility | A single `visibility` field on history rows separates public remarks from internal ones |
+| Overdue | Not stored; computed as `due_at` in the past and status not Resolved |
+| Files | Stored as binary data in the database so they survive restarts on free hosting |
+| Portability | String statuses and a binary column keep the schema usable on PostgreSQL in production and on an in-memory database in tests |
+| Privacy | No real personal data; the public tracker query selects only status, department, dates and public history |
+
+## 7. Demo data
+
+The seed script creates fictional data only, and can be run more than once safely:
+- Ten sample departments
+- One CMO administrator, several officers in different departments, and several citizens (emails use the reserved `example.test` domain)
+- About 25 grievances across districts, categories, priorities and every status, including overdue and escalated ones, with history rows, assignments, action reports and feedback
+
+Demo login details are listed in the root `README.md`.

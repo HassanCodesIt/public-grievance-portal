@@ -1,46 +1,143 @@
-# 01. Project Overview — CM Kerala Public Grievance Redressal Portal
+# 01. Project Overview
 
-> **Recruitment Prototype Notice**  
-> This application is an engineering prototype submitted for the **WhiteMatrix Software Solutions Machine Test (AI Full Stack Engineer)**.  
-> It is strictly a fictional demonstration and is **not affiliated with, endorsed by, or operated by the Government of Kerala or the Chief Minister's Office (CMO)**. All citizen grievances, officer names, and government credentials are entirely fictional.
+**Project:** Janasevanam (ജനസേവനം), a Public Grievance Redressal Portal
+**Purpose:** Recruitment assessment prototype (WhiteMatrix Software Solutions, AI Full Stack Engineer machine test)
 
----
-
-## 1. Problem Statement
-Public grievance redressal systems face distinct operational bottlenecks:
-1. **Misrouting & Triage Overload:** Thousands of citizen complaints arrive daily across diverse departments (Public Works, Water Resources, Health, KSEB, Revenue, etc.). Misclassified complaints waste valuable days being bounced across departments.
-2. **Lack of Human-Centric Transparency:** Citizens often submit complaints into an administrative black box, with ambiguous progress statuses and no clear audit trail of who touched their file.
-3. **Unchecked Automation Risks:** Naive AI implementations that automatically close, reject, or assign grievances create administrative hazards and public distrust.
-
-## 2. Solution & Objectives
-The **Janasevanam (ജനസേവനം)** Public Grievance Redressal Portal solves these challenges through:
-- **AI-Assisted Triage with Human Governance:** Fast, structured grievance triage powered by Groq's high-throughput open LLM (`openai/gpt-oss-120b`), generating category suggestions, urgency priority, and concise executive summaries.
-- **Strict Human-in-the-Loop Review:** AI suggestions **never** make official administrative decisions. CMO administrators inspect, confirm, or override AI recommendations before departmental assignment.
-- **Auditable 5-State Workflow State Machine:** Strict lifecycle enforcement (`Submitted` → `Under Review` → `In Progress` → `Resolved` ⇄ `Reopened`) with mandatory immutable history logs (`grievance_history`).
-- **Granular Role-Based Access Control (RBAC):** Distinct interfaces and object-level authorization for **Citizens**, **CMO Administrators**, and **Department Officers**.
-- **Transparent Public Tracking:** Citizens can track public progress via unique Reference Numbers (`CMK-YYYY-XXXXXX`) while safeguarding sensitive personal data and internal administrative remarks.
+> **Recruitment prototype.** Not affiliated with or endorsed by the Government of Kerala or the Chief Minister's Office. All data in this project is fictional. No real citizen grievances are collected and no official credentials are used.
 
 ---
 
-## 3. Core Feature Matrix
+## 1. Problem statement
 
-| Functional Module | Citizen | CMO Admin | Department Officer | Public Guest |
-|---|:---:|:---:|:---:|:---:|
-| Register & Authenticate (JWT) | ✅ | ✅ | ✅ | — |
-| AI Grievance Classification | ✅ (Preview) | ✅ (Review & Confirm) | — | — |
-| Grievance Submission & File Upload | ✅ | — | — | — |
-| Anonymous Public Reference Tracker | ✅ | ✅ | ✅ | ✅ |
-| Role-Filtered Dashboards | ✅ (Own) | ✅ (All + SLA Overdue) | ✅ (Dept Only) | — |
-| Workflow State Transitions | Reopen | Review, Assign, Escalate, ATR Decision | Progress Remarks, Submit ATR | — |
-| Action-Taken Report (ATR) Workflow | Inspect (Public) | Accept / Return for Rework | Draft & Submit | — |
-| Post-Resolution Citizen Feedback | ✅ (1–5 Stars) | Review Feedback | Review Feedback | — |
-| Escalation & SLA Overdue Flags | — | ✅ | View Flag | — |
-| Analytics & Visualization Charts | — | ✅ | — | ✅ (Public Stats) |
+Citizens face problems with public infrastructure, healthcare, education and other public services. When there is no single, trackable channel to raise them, complaints get lost between offices, citizens cannot see what happened to them, and the Chief Minister's Office (CMO) cannot see which complaints are delayed or which departments are slow.
 
----
+The assignment asks for a working prototype where citizens submit grievances, the CMO reviews them and forwards them to the right department, officers act on them, and every step stays visible and traceable until the grievance is resolved or reopened.
 
-## 4. Scope and Guardrails
-- **Fictional Data Only:** Test data uses the reserved `.example.test` domain and mock phone numbers.
-- **Dual-Mode AI Resilience:** If the Groq API key is omitted, exhausted, or experiences network interruptions, the system automatically engages an in-memory heuristic keyword fallback engine clearly labeled in the user interface.
-- **Attachment Storage:** Attachments (PNG, JPEG, PDF up to 2 MB) are verified via magic bytes and persisted securely in the database (`bytea` / `LargeBinary`) to avoid data loss on ephemeral hosting tiers.
+## 2. Objectives
 
+1. Give citizens one place to submit a grievance, receive a unique reference number and follow its progress.
+2. Give the CMO a central dashboard to review, prioritise, forward, monitor and escalate grievances.
+3. Give department officers a focused inbox limited to their own department, with a way to report the action taken.
+4. Record every status change with a timestamp and the responsible user, so each grievance is traceable for its whole life.
+5. Use an AI assistant to speed up triage (category, department, priority, summary, possible duplicates) while keeping every decision with a human.
+6. Provide statistics (counts, overdue, district-wise and department-wise views) built from stored data.
+
+## 3. Users and roles
+
+| Role | Who they are | Main abilities |
+|---|---|---|
+| Public visitor | Anyone | Read the public pages, track a grievance by reference number (limited information only) |
+| Citizen | Registered user | Submit grievances with optional attachment, get AI suggestions, track, view own dashboard, give feedback, reopen |
+| CMO admin | Administrator in the CMO | See all grievances, filter, review AI suggestions, set final category and priority, forward to a department and officer, add remarks, escalate, review action reports, view statistics |
+| Department officer | Officer of one department | See only grievances forwarded to their department, add progress remarks, submit an action-taken report |
+
+## 4. Scope
+
+### In scope
+- Public website: Home, About Us, How It Works, Departments, Contact Us, FAQ, Track Grievance
+- Citizen portal: registration, login and logout, grievance submission, reference number, tracking, dashboard, feedback and reopening
+- CMO dashboard and department officer dashboard
+- Mandatory workflow with five statuses and a full history
+- AI Grievance Assistant using the Groq API, with human review and a labelled fallback
+- File upload and authorised retrieval of attachments
+- Role-based access control, validation, automated tests
+- Deployment as a hosted application
+
+### Out of scope (by design)
+- Real citizen data, real government credentials, official emblems or logos
+- Integration with any real government system
+- Email, SMS or push notifications (updates appear inside the application)
+- Payments, mobile apps, multilingual interface translation
+- Production-scale performance, high availability and formal security certification
+
+## 5. Features
+
+### 5.1 Public website
+| Page | Content |
+|---|---|
+| Home | Introduction, navigation, prominent Submit Grievance and Track Grievance actions, sample statistics, featured departments, footer with the prototype disclaimer |
+| About Us | Purpose, vision, mission and objectives |
+| How It Works | Submission, CMO review, department assignment, action and resolution |
+| Departments | Sample departments with names and short descriptions, loaded from the backend |
+| Contact Us | Form with name, email, subject and message; each enquiry is saved in the database |
+| FAQ | Questions about submitting and tracking grievances |
+| Track Grievance | Search by reference number; shows status, assigned department and the public status history, never personal data or internal remarks |
+
+### 5.2 Citizen portal
+- Registration with name, email, mobile number and password; login and logout
+- Submit a grievance with district, category, subject, detailed description and an optional image or document
+- Unique reference number after submission, in the format `CMK-2026-000123`
+- AI suggestion for category, department, priority and summary before submitting, which the citizen can accept or change
+- Dashboard with submitted grievances, pending and resolved counts and details of earlier complaints
+- Remarks from the CMO and officers (public ones only), feedback after resolution, and the option to reopen a resolved grievance with a reason
+
+### 5.3 CMO dashboard
+- All grievances with total, pending, resolved and overdue counts
+- Filters by district, category, priority, status and overdue
+- Grievance detail page with attachments, AI analysis, history, assignments and reports
+- Accept or override the AI suggestion; set the final category and priority
+- Forward to a department and officer; add public or internal remarks; escalate delayed grievances
+- Review action-taken reports: accept (Resolved) or return for rework
+- District-wise and department-wise statistics as charts, from stored data
+
+### 5.4 Department officer dashboard
+- Secure login with assigned credentials
+- List limited to grievances forwarded to the officer's department
+- Complaint details and attachments
+- Progress remarks and an action-taken report (text and optional file) submitted back to the CMO
+
+### 5.5 AI Grievance Assistant
+- Analyses the complaint text and suggests a category, a department and a priority (Low, Medium or High)
+- Writes a short summary for the CMO
+- Optionally flags possible duplicate complaints for human review
+- Always labelled as a suggestion; never makes an official decision
+- Falls back to a clearly labelled keyword classifier if the model is unavailable
+
+## 6. Grievance lifecycle
+
+Statuses: **Submitted, Under Review, In Progress, Resolved, Reopened.**
+
+1. A citizen submits a grievance (status **Submitted**). The system generates the reference number.
+2. The CMO reviews it and confirms or changes the AI suggestions (**Under Review**).
+3. The CMO forwards it to a department and officer (**In Progress**).
+4. The officer investigates, adds remarks and submits an action-taken report.
+5. The CMO reviews the report. Accepting it makes the grievance **Resolved**; returning it keeps it **In Progress** for rework.
+6. The citizen sees the update and can give feedback, or reopen a resolved grievance (**Reopened**), which goes back to CMO review.
+
+Every status change is stored with its timestamp, the responsible user and role, the old and new status and a remark. The full transition table is in `02_System_Architecture.md`.
+
+## 7. Key design decisions
+
+| Decision | Reason |
+|---|---|
+| AI only suggests; humans decide | The brief forbids AI from making official decisions |
+| Citizen sees public remarks only | Internal CMO notes stay confidential |
+| One transition function enforces all status changes | Guarantees valid transitions and a complete history |
+| Attachments stored in the database | Free hosting platforms do not keep local files between restarts |
+| Fictional service-level targets (High 3 days, Medium 7, Low 14) | Needed to calculate "overdue" in a prototype |
+| Public tracker returns limited data | Protects citizen privacy |
+
+## 8. Technology summary
+
+| Layer | Technology |
+|---|---|
+| Frontend | React with Tailwind CSS |
+| Backend | Python, FastAPI, Pydantic, SQLAlchemy |
+| Database | PostgreSQL (Neon) |
+| Authentication | JWT bearer tokens with role-based access |
+| AI | Groq API, model `openai/gpt-oss-120b` |
+| Testing | pytest |
+
+Details: `02_System_Architecture.md`. The tools used to build the project (AI coding assistants, design tool and services) are disclosed in the root `README.md`.
+
+## 9. Document map
+
+| File | Content |
+|---|---|
+| `01_Project_Overview.md` | This document |
+| `02_System_Architecture.md` | Architecture, flows, security, deployment |
+| `03_Database_Design.md` | Schema, relationships, ER diagram |
+| `04_API_Documentation.md` | Endpoints with examples |
+| `05_AI_Integration.md` | AI design, safeguards, limitations |
+| `06_Setup_and_Testing.md` | Installation, configuration, test cases |
+| `07_User_Guide.md` | How each role uses the system |
